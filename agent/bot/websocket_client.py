@@ -48,7 +48,7 @@ class NetchatWebSocketClient:
             on_error=self._on_error,
             on_close=self._on_close,
         )
-        self._thread = threading.Thread(target=self._ws.run_forever, daemon=True)
+        self._thread = threading.Thread(target=self._ws.run_forever, kwargs={"reconnect": 5}, daemon=True)
         self._thread.start()
         print("[ws] listener started")
 

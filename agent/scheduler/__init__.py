@@ -8,6 +8,7 @@ _scheduler: BackgroundScheduler | None = None
 def init_scheduler(crawl_and_report_fn) -> BackgroundScheduler:
     global _scheduler
     day = os.getenv("REPORT_SCHEDULE_DAY", "mon")
+    day_of_week = int(day) if day.isdigit() else day
     time_str = os.getenv("REPORT_SCHEDULE_TIME", "08:00")
     timezone = os.getenv("REPORT_TIMEZONE", "Asia/Ho_Chi_Minh")
     hour, minute = time_str.split(":")
@@ -16,7 +17,7 @@ def init_scheduler(crawl_and_report_fn) -> BackgroundScheduler:
     _scheduler.add_job(
         crawl_and_report_fn,
         CronTrigger(
-            day_of_week=day,
+            day_of_week=day_of_week,
             hour=int(hour),
             minute=int(minute),
             timezone=timezone,
