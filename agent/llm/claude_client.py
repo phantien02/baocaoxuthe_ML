@@ -1,41 +1,46 @@
 import os
-import anthropic
+from google import genai
+from google.genai import types
 
-_client: anthropic.Anthropic | None = None
+from agent.llm.prompts import REPORT_PROMPT, SUMMARIZE_PROMPT
+
+_client: genai.Client | None = None
 
 
-def get_client() -> anthropic.Anthropic:
+def get_client() -> genai.Client:
     global _client
     if _client is None:
-        _client = anthropic.Anthropic(api_key=os.environ["CLAUDE_API_KEY"])
+        _client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
     return _client
 
 
+def _model() -> str:
+    return os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+
+
 def generate_report(items: list[dict], week_label: str) -> str:
-    from .prompts import REPORT_PROMPT
-    items_text = "\n\n".join(
-        f"[{item['source'].upper()}] {item['title']}\nURL: {item['url']}\n{item['content']}"
-        for item in items
+    prompt = REPORT_PROMPT.format(
+        week_label=week_label,
+        items="\n\n".join(
+            f"Source: {i['source']}\nTitle: {i['title']}\nURL: {i['url']}\nContent: {i['content'][:500]}"
+            for i in items
+        ),
     )
-    model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
-    message = get_client().messages.create(
-        model=model,
-        max_tokens=4096,
-        messages=[{"role": "user", "content": REPORT_PROMPT.format(
-            week_label=week_label, items=items_text
-        )}],
+    client = get_client()
+    response = client.models.generate_content(
+        model=_model(),
+        contents=prompt,
+        config=types.GenerateContentConfig(max_output_tokens=4096),
     )
-    return message.content[0].text
+    return response.text
 
 
 def summarize_document(content: str, filename: str) -> str:
-    from .prompts import SUMMARIZE_PROMPT
-    model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6")
-    message = get_client().messages.create(
-        model=model,
-        max_tokens=2048,
-        messages=[{"role": "user", "content": SUMMARIZE_PROMPT.format(
-            filename=filename, content=content[:8000]
-        )}],
+    prompt = SUMMARIZE_PROMPT.format(filename=filename, content=content[:8000])
+    client = get_client()
+    response = client.models.generate_content(
+        model=_model(),
+        contents=prompt,
+        config=types.GenerateContentConfig(max_output_tokens=2048),
     )
-    return message.content[0].text
+    return response.text

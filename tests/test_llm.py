@@ -12,37 +12,34 @@ SAMPLE_ITEMS = [
 
 
 def _mock_response(text: str):
-    mock_msg = MagicMock()
-    mock_msg.content = [MagicMock(text=text)]
-    return mock_msg
+    mock_resp = MagicMock()
+    mock_resp.text = text
+    return mock_resp
 
 
 def test_generate_report_returns_string():
-    with patch("agent.llm.claude_client.get_client") as mock_get:
-        mock_client = MagicMock()
-        mock_get.return_value = mock_client
-        mock_client.messages.create.return_value = _mock_response("📡 BÁO CÁO...")
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = _mock_response("📡 BÁO CÁO...")
+    with patch("agent.llm.claude_client.get_client", return_value=mock_client):
         result = generate_report(SAMPLE_ITEMS, "Tuần 27/2026")
     assert isinstance(result, str)
     assert len(result) > 0
 
 
 def test_generate_report_calls_correct_model():
-    with patch("agent.llm.claude_client.get_client") as mock_get:
-        mock_client = MagicMock()
-        mock_get.return_value = mock_client
-        mock_client.messages.create.return_value = _mock_response("report")
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = _mock_response("report")
+    with patch("agent.llm.claude_client.get_client", return_value=mock_client):
         generate_report(SAMPLE_ITEMS, "Tuần 27/2026")
-    call_kwargs = mock_client.messages.create.call_args.kwargs
-    assert call_kwargs["model"] == "claude-sonnet-4-6"
-    assert call_kwargs["max_tokens"] == 4096
+    call_kwargs = mock_client.models.generate_content.call_args.kwargs
+    assert call_kwargs["model"] == "gemini-2.0-flash"
+    assert call_kwargs["config"].max_output_tokens == 4096
 
 
 def test_summarize_document_returns_string():
-    with patch("agent.llm.claude_client.get_client") as mock_get:
-        mock_client = MagicMock()
-        mock_get.return_value = mock_client
-        mock_client.messages.create.return_value = _mock_response("Tóm tắt: ...")
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = _mock_response("Tóm tắt: ...")
+    with patch("agent.llm.claude_client.get_client", return_value=mock_client):
         result = summarize_document("Document content here", "spec.pdf")
     assert isinstance(result, str)
     assert len(result) > 0
@@ -50,11 +47,10 @@ def test_summarize_document_returns_string():
 
 def test_summarize_truncates_long_content():
     long_content = "x" * 20000
-    with patch("agent.llm.claude_client.get_client") as mock_get:
-        mock_client = MagicMock()
-        mock_get.return_value = mock_client
-        mock_client.messages.create.return_value = _mock_response("summary")
+    mock_client = MagicMock()
+    mock_client.models.generate_content.return_value = _mock_response("summary")
+    with patch("agent.llm.claude_client.get_client", return_value=mock_client):
         summarize_document(long_content, "big.pdf")
-    call_kwargs = mock_client.messages.create.call_args.kwargs
-    prompt_sent = call_kwargs["messages"][0]["content"]
+    call_kwargs = mock_client.models.generate_content.call_args.kwargs
+    prompt_sent = call_kwargs["contents"]
     assert len(prompt_sent) < len(long_content)
