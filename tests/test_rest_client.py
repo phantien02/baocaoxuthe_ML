@@ -162,19 +162,6 @@ def test_upload_and_send_file(tmp_path):
 
 
 @resp_lib.activate
-def test_add_reaction():
-    resp_lib.add(resp_lib.GET, f"{BOT}/users/me",
-                 json={"id": "user_bot"}, status=200)
-    resp_lib.add(resp_lib.POST, f"{BOT}/reactions",
-                 json={"user_id": "user_bot", "post_id": "post1", "emoji_name": "thumbsup"},
-                 status=201)
-    client = NetchatRestClient()
-    client.add_reaction("post1")
-    body = json.loads(resp_lib.calls[1].request.body.decode("utf-8"))
-    assert body == {"user_id": "user_bot", "post_id": "post1", "emoji_name": "thumbsup"}
-
-
-@resp_lib.activate
 def test_download_file():
     resp_lib.add(
         resp_lib.GET,

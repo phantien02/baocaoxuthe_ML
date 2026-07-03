@@ -2,7 +2,7 @@ import os
 from google import genai
 from google.genai import types
 
-from agent.llm.prompts import REPORT_PROMPT, SUMMARIZE_PROMPT
+from agent.llm.prompts import CHAT_PROMPT, REPORT_PROMPT, SUMMARIZE_PROMPT
 
 _client: genai.Client | None = None
 
@@ -31,6 +31,21 @@ def generate_report(items: list[dict], week_label: str) -> str:
         model=_model(),
         contents=prompt,
         config=types.GenerateContentConfig(max_output_tokens=4096),
+    )
+    return response.text
+
+
+def chat_reply(message: str, sender_name: str = "", bot_name: str = "bot") -> str:
+    prompt = CHAT_PROMPT.format(
+        bot_name=bot_name,
+        sender_name=sender_name or "người dùng",
+        message=message[:4000],
+    )
+    client = get_client()
+    response = client.models.generate_content(
+        model=_model(),
+        contents=prompt,
+        config=types.GenerateContentConfig(max_output_tokens=1024),
     )
     return response.text
 

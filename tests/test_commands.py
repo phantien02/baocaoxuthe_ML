@@ -3,21 +3,38 @@ from unittest.mock import MagicMock, patch
 from agent.bot.commands import handle_post
 from agent.storage.database import init_db
 
+BOT_ID = "bot_user_id_26chars_xxxxxx"
+BOT_USERNAME = "bot_test_tienpc1"
+
 
 def make_rest(channel_id="chan123"):
     rest = MagicMock()
     rest.get_channel_id.return_value = channel_id
+    rest.get_my_user_id.return_value = BOT_ID
+    rest.get_my_username.return_value = BOT_USERNAME
     return rest
 
 
-def make_post(message="!report", channel_id="chan123", file_ids=None, post_type=""):
+def make_post(message="!report", channel_id="chan123", file_ids=None, post_type="", user_id="user1"):
     return {
         "channel_id": channel_id,
         "message": message,
-        "user_id": "user1",
+        "user_id": user_id,
         "file_ids": file_ids or [],
         "type": post_type,
     }
+
+
+def dm_event(sender="@tienpc1"):
+    return {"channel_type": "D", "sender_name": sender}
+
+
+def group_event(mentions=None, sender="@tienpc1"):
+    ev = {"channel_type": "P", "sender_name": sender}
+    if mentions is not None:
+        import json
+        ev["mentions"] = json.dumps(mentions)
+    return ev
 
 
 def test_report_command_posts_message():
@@ -27,26 +44,86 @@ def test_report_command_posts_message():
     with patch("agent.bot.commands.get_recent_items", return_value=[{"title": "T", "source": "3gpp", "url": "https://x.com", "content": "c"}]):
         with patch("agent.bot.commands.generate_report", return_value="📡 Report"):
             with patch("agent.bot.commands.save_report", return_value=1):
-                handle_post(post, rest)
+                handle_post(post, rest, group_event())
     rest.post_message.assert_called_once()
     assert "📡 Report" in rest.post_message.call_args[0][0]
 
 
-def test_ignores_non_command_in_channel():
+def test_ignores_non_command_in_configured_channel():
     init_db()
     rest = make_rest()
     post = make_post("just a normal message")
-    handle_post(post, rest)
+    handle_post(post, rest, group_event())
     rest.post_message.assert_not_called()
 
 
-def test_responds_to_anything_in_dm():
+def test_dm_natural_message_gets_llm_reply():
     init_db()
     rest = make_rest()
-    post = make_post("hello bot", channel_id="dm_chan", post_type="D")
-    with patch("agent.bot.commands.get_recent_items", return_value=[]):
-        handle_post(post, rest)
+    post = make_post("tôi không biết sử dụng, hãy hướng dẫn tôi", channel_id="dm_chan")
+    with patch("agent.bot.commands.chat_reply", return_value="Chào bạn! Tôi có thể...") as chat:
+        handle_post(post, rest, dm_event())
+    chat.assert_called_once()
     rest.post_message.assert_called_once()
+    assert "Chào bạn" in rest.post_message.call_args[0][0]
+    assert rest.post_message.call_args[0][1] == "dm_chan"
+
+
+def test_group_mention_gets_llm_reply():
+    init_db()
+    rest = make_rest(channel_id="chan123")
+    # nhóm bất kỳ (không phải channel cấu hình), bot được @mention
+    post = make_post(f"@{BOT_USERNAME} bạn làm được gì?", channel_id="random_group")
+    with patch("agent.bot.commands.chat_reply", return_value="Tôi làm được...") as chat:
+        handle_post(post, rest, group_event(mentions=[BOT_ID]))
+    chat.assert_called_once()
+    # phần @bot phải được bỏ khỏi tin nhắn gửi cho LLM
+    assert "@" + BOT_USERNAME not in chat.call_args[0][0]
+    rest.post_message.assert_called_once()
+    assert rest.post_message.call_args[0][1] == "random_group"
+
+
+def test_group_mention_by_text_without_mentions_field():
+    init_db()
+    rest = make_rest(channel_id="chan123")
+    post = make_post(f"@{BOT_USERNAME} xin chào", channel_id="random_group")
+    with patch("agent.bot.commands.chat_reply", return_value="Chào!") as chat:
+        handle_post(post, rest, group_event())  # không có field mentions
+    chat.assert_called_once()
+    rest.post_message.assert_called_once()
+
+
+def test_group_message_without_mention_ignored():
+    init_db()
+    rest = make_rest(channel_id="chan123")
+    post = make_post("nói chuyện bình thường", channel_id="random_group")
+    handle_post(post, rest, group_event())
+    rest.post_message.assert_not_called()
+
+
+def test_mention_with_command_runs_command():
+    init_db()
+    rest = make_rest(channel_id="chan123")
+    post = make_post(f"@{BOT_USERNAME} !sources", channel_id="random_group")
+    handle_post(post, rest, group_event(mentions=[BOT_ID]))
+    rest.post_message.assert_called_once()
+    assert "3GPP" in rest.post_message.call_args[0][0]
+
+
+def test_ignores_own_posts():
+    init_db()
+    rest = make_rest()
+    post = make_post("tin nhắn của chính bot", channel_id="dm_chan", user_id=BOT_ID)
+    handle_post(post, rest, dm_event())
+    rest.post_message.assert_not_called()
+
+
+def test_ignores_system_posts():
+    init_db()
+    rest = make_rest()
+    post = make_post("user đã tham gia", channel_id="chan123", post_type="system_join_channel")
+    handle_post(post, rest, group_event())
+    rest.post_message.assert_not_called()
 
 
 def test_status_command():
@@ -55,7 +132,7 @@ def test_status_command():
     post = make_post("!status")
     with patch("agent.bot.commands.get_last_crawl_time", return_value="2026-06-30 08:00"):
         with patch("agent.bot.commands.get_next_run", return_value="2026-07-07 08:00"):
-            handle_post(post, rest)
+            handle_post(post, rest, group_event())
     rest.post_message.assert_called_once()
     msg = rest.post_message.call_args[0][0]
     assert "2026-06-30" in msg
@@ -65,7 +142,7 @@ def test_sources_command():
     init_db()
     rest = make_rest()
     post = make_post("!sources")
-    handle_post(post, rest)
+    handle_post(post, rest, group_event())
     rest.post_message.assert_called_once()
     msg = rest.post_message.call_args[0][0]
     assert "3GPP" in msg
@@ -75,7 +152,7 @@ def test_help_command():
     init_db()
     rest = make_rest()
     post = make_post("!help")
-    handle_post(post, rest)
+    handle_post(post, rest, group_event())
     rest.post_message.assert_called_once()
     msg = rest.post_message.call_args[0][0]
     assert "!report" in msg
@@ -90,7 +167,7 @@ def test_file_attachment_triggers_summary():
     with patch("agent.bot.commands.extract_text_from_bytes", return_value="extracted text"):
         with patch("agent.bot.commands.summarize_document", return_value="Summary here"):
             with patch("agent.bot.commands.save_uploaded_doc", return_value=1):
-                handle_post(post, rest)
+                handle_post(post, rest, group_event())
     rest.post_message.assert_called_once()
     assert "Summary here" in rest.post_message.call_args[0][0]
 
@@ -99,5 +176,5 @@ def test_ignores_posts_from_other_channels():
     init_db()
     rest = make_rest(channel_id="chan123")
     post = make_post("!report", channel_id="other_chan")
-    handle_post(post, rest)
+    handle_post(post, rest, group_event())
     rest.post_message.assert_not_called()

@@ -1,7 +1,8 @@
 import io
+import json
 from datetime import datetime
 
-from agent.llm.claude_client import generate_report, summarize_document
+from agent.llm.claude_client import chat_reply, generate_report, summarize_document
 from agent.storage.database import (
     get_recent_items, save_report, save_uploaded_doc, get_last_crawl_time,
 )
@@ -10,29 +11,67 @@ from agent.scheduler import get_next_run
 SOURCES = ["3GPP", "GSMA", "ETSI", "Ericsson", "Nokia", "Huawei"]
 
 
-def handle_post(post: dict, rest_client) -> None:
+def handle_post(post: dict, rest_client, event_data: dict | None = None) -> None:
+    event_data = event_data or {}
     channel_id = post.get("channel_id", "")
     message = post.get("message", "").strip()
     user_id = post.get("user_id", "")
     file_ids = post.get("file_ids", [])
-    post_type = post.get("type", "")
+    sender_name = (event_data.get("sender_name") or "").lstrip("@")
 
-    configured_channel = rest_client.get_channel_id()
-    is_dm = post_type == "D"
-    is_configured_channel = channel_id == configured_channel
+    # Bỏ qua tin hệ thống (join/leave...) và tin do chính bot gửi (tránh vòng lặp)
+    if post.get("type", "").startswith("system_"):
+        return
+    if user_id == rest_client.get_my_user_id():
+        return
 
-    if not is_dm and not is_configured_channel:
+    # channel_type nằm trong event data của WebSocket, không nằm trong post
+    is_dm = event_data.get("channel_type", "") == "D"
+    mentioned, clean_message = _detect_mention(message, event_data, rest_client)
+    is_configured_channel = channel_id == rest_client.get_channel_id()
+
+    # Bot phản hồi khi: chat riêng, được @mention ở bất kỳ nhóm nào,
+    # hoặc tin trong channel báo cáo đã cấu hình
+    if not (is_dm or mentioned or is_configured_channel):
         return
 
     if file_ids:
         _handle_file_upload(file_ids[0], channel_id, user_id, rest_client)
         return
 
-    if is_configured_channel and not message.startswith("!"):
+    text = clean_message if mentioned else message
+    if not text:
         return
 
-    cmd = message.lower().split()[0] if message else "!report"
+    if text.startswith("!"):
+        _handle_command(text, channel_id, rest_client, allow_chat_fallback=is_dm or mentioned)
+        return
 
+    # Trong channel báo cáo, tin thường (không lệnh, không mention) thì bỏ qua
+    if not (is_dm or mentioned):
+        return
+
+    # Giao tiếp tự nhiên qua LLM
+    reply = chat_reply(text, sender_name, rest_client.get_my_username())
+    rest_client.post_message(reply, channel_id)
+
+
+def _detect_mention(message: str, event_data: dict, rest_client) -> tuple[bool, str]:
+    """Nhận diện bot được @mention; trả về (mentioned, message đã bỏ phần @bot)."""
+    try:
+        raw = event_data.get("mentions", "[]")
+        mentioned_ids = json.loads(raw) if isinstance(raw, str) else list(raw)
+    except Exception:
+        mentioned_ids = []
+    username = rest_client.get_my_username()
+    tag = f"@{username}"
+    mentioned = rest_client.get_my_user_id() in mentioned_ids or tag in message
+    clean = message.replace(tag, " ").strip() if mentioned else message
+    return mentioned, clean
+
+
+def _handle_command(text: str, channel_id: str, rest_client, allow_chat_fallback: bool = False) -> None:
+    cmd = text.lower().split()[0]
     if cmd in ("!report", "!báo_cáo"):
         _handle_report(channel_id, rest_client)
     elif cmd == "!status":
@@ -41,8 +80,12 @@ def handle_post(post: dict, rest_client) -> None:
         rest_client.post_message(_sources_text(), channel_id)
     elif cmd == "!help":
         rest_client.post_message(_help_text(), channel_id)
-    elif is_dm:
-        _handle_report(channel_id, rest_client)
+    elif allow_chat_fallback:
+        # Lệnh lạ trong ngữ cảnh trò chuyện — để LLM trả lời tự nhiên
+        reply = chat_reply(text, "", rest_client.get_my_username())
+        rest_client.post_message(reply, channel_id)
+    else:
+        rest_client.post_message(_help_text(), channel_id)
 
 
 def _handle_report(channel_id: str, rest_client) -> None:
@@ -75,7 +118,9 @@ def _help_text() -> str:
         "  `!status` — Thời gian crawl cuối + lịch tiếp theo\n"
         "  `!sources` — Danh sách nguồn\n"
         "  `!help` — Trợ giúp\n"
-        "  _(attach file PDF/DOCX)_ — Tóm tắt tài liệu"
+        "  _(attach file PDF/DOCX)_ — Tóm tắt tài liệu\n\n"
+        "💬 Ngoài lệnh, bạn có thể chat tự nhiên với tôi: nhắn riêng (DM) "
+        "hoặc nhắc tên tôi trong nhóm (`@bot...`) rồi đặt câu hỏi."
     )
 
 

@@ -125,20 +125,24 @@ Response thành công trả về 201 Created kèm JSON của tin nhắn vừa t�
 {"id": "<POST_ID>", "channel_id": "<CHANNEL_ID>", "message": "Xin chao", "user_id": "<USER_ID_BOT>", ...}
 ```
 
-Field `id` trong response là **post_id** — cần giữ lại nếu muốn thả reaction vào tin nhắn này (mục 4.3).
-
 **Gửi vào channel nhóm:** dùng y hệt lệnh trên, chỉ thay channel_id bằng ID của channel nhóm (lấy qua API mục 4.1).
 
 ## 4. Các API khác (sau khi đã có ID)
 
-### 4.1. Lấy thông tin channel theo tên
+### 4.1. Lấy channel_id của channel nhóm
+
+> **Lưu ý thực tế (kiểm chứng 07/2026):** gateway bot CHẶN endpoint tra channel theo tên
+> (`/channels/name/...` trả về `api.bot.endpoint_not_allowed`). Cách hoạt động được là
+> liệt kê các channel bot là thành viên rồi tìm theo trường `name`:
 
 ```cmd
-curl -X GET "https://bot-netchat.viettel.vn/api/v4/channels/name/<TEAM_NAME>/<CHANNEL_NAME>" ^
+curl -X GET "https://bot-netchat.viettel.vn/api/v4/users/me/channels" ^
   -H "Authorization: Bearer <TOKEN>"
 ```
 
-Response chứa `id` (channel_id) và `team_id` — team_id cần cho việc tạo channel mới.
+Response là mảng JSON các channel (DM lẫn nhóm). Tìm phần tử có `name` trùng tên channel
+cần gửi, lấy trường `id` — đó là channel_id. Điều kiện: **bot phải được thêm vào channel trước**
+(mời bot vào channel như mời một thành viên bình thường).
 
 ### 4.2. Gửi tin nhắn kèm file (quy trình 2 bước)
 
@@ -210,65 +214,13 @@ Response thành công: trong `metadata.files` đã xuất hiện `post_id` — f
 - channel_id khi upload (Bước 1) và khi post (Bước 2) phải **cùng một channel**.
 - Upload nhiều file trong 1 request: lặp lại cờ `-F "files=@..."` nhiều lần — response trả về nhiều phần tử trong file_infos.
 
-### 4.3. Thả reaction vào tin nhắn
-
-```cmd
-curl -X POST "https://bot-netchat.viettel.vn/api/v4/reactions" ^
-  -H "Authorization: Bearer <TOKEN>" ^
-  -H "Content-Type: application/json" ^
-  -d "{\"user_id\":\"<USER_ID_BOT>\",\"post_id\":\"<POST_ID>\",\"emoji_name\":\"thumbsup\"}"
-```
-
-### 4.4. Tạo channel mới
-
-Cần `team_id` (lấy ở mục 4.1). Type: `"O"` = public, `"P"` = private.
-
-```cmd
-curl -X POST "https://bot-netchat.viettel.vn/api/v4/channels" ^
-  -H "Authorization: Bearer <TOKEN>" ^
-  -H "Content-Type: application/json" ^
-  -d "{\"team_id\":\"<TEAM_ID>\",\"name\":\"test-channel-01\",\"display_name\":\"Test Channel 01\",\"type\":\"O\"}"
-```
-
-### 4.5. Quản lý thành viên channel
-
-Thêm thành viên:
-
-```cmd
-curl -X POST "https://bot-netchat.viettel.vn/api/v4/channels/<CHANNEL_ID>/members" ^
-  -H "Authorization: Bearer <TOKEN>" ^
-  -H "Content-Type: application/json" ^
-  -d "{\"user_id\":\"<USER_ID>\"}"
-```
-
-Xoá thành viên:
-
-```cmd
-curl -X DELETE "https://bot-netchat.viettel.vn/api/v4/channels/<CHANNEL_ID>/members/<USER_ID>" ^
-  -H "Authorization: Bearer <TOKEN>"
-```
-
-Xem danh sách thành viên:
-
-```cmd
-curl -X GET "https://bot-netchat.viettel.vn/api/v4/channels/<CHANNEL_ID>/members" ^
-  -H "Authorization: Bearer <TOKEN>"
-```
-
-Gán quyền admin trong channel:
-
-```cmd
-curl -X PUT "https://bot-netchat.viettel.vn/api/v4/channels/<CHANNEL_ID>/members/<USER_ID>/schemeRoles" ^
-  -H "Authorization: Bearer <TOKEN>" ^
-  -H "Content-Type: application/json" ^
-  -d "{\"scheme_admin\":true,\"scheme_user\":true}"
-```
-
 ## 5. Bảng lỗi thường gặp và cách xử lý
 
 | Lỗi | Nguyên nhân | Cách xử lý |
 |---|---|---|
 | 400 Bad Request (trang HTML nginx, không phải JSON) | Chạy lệnh từ PowerShell hoặc Postman — bị phần mềm bảo mật nội bộ chặn ở tầng WAF | Chuyển sang cmd.exe hoặc Git Bash. Đổi mạng KHÔNG giải quyết được. |
+| 403 trang HTML (không phải JSON) khi gọi từ code Python | WAF chặn theo User-Agent (`python-requests` bị chặn giống PowerShell/Postman) | Đặt header `User-Agent` khác, ví dụ `curl/8.4.0` (code bot đã làm sẵn) |
+| 403 JSON `api.bot.endpoint_not_allowed` | Bot Token chỉ được phép gọi một số endpoint nhất định (whitelist) | Dùng endpoint thay thế trong whitelist — ví dụ tra channel bằng `/users/me/channels` (mục 4.1) |
 | 403 "API bot phải được gọi qua BMS..." | Dùng Bot Token nhưng gọi nhầm domain netchat.viettel.vn | Đổi sang `https://bot-netchat.viettel.vn` |
 | 400 "Không hợp lệ hoặc thiếu user_id" | Truyền username (vd: tienpc1) vào chỗ cần user_id dạng ID 26 ký tự | Tra ID trước bằng `GET /users/username/{username}` (Bước 1) |
 | 401 session_expired / TokenRequired | Lệnh nhiều dòng bị tách rời — chạy cú pháp Bash (dấu `\`) trong cmd, hoặc ngược lại | cmd dùng `^`, Git Bash dùng `\`. Không trộn lẫn. |

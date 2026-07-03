@@ -31,8 +31,11 @@ class NetchatWebSocketClient:
         try:
             event = json.loads(raw)
             if event.get("event") == "posted":
-                post = json.loads(event["data"]["post"])
-                self._on_post_callback(post)
+                # event data chứa channel_type ("D"/"P"/"O"), sender_name và
+                # mentions — post object không có các thông tin này
+                data = event.get("data", {})
+                post = json.loads(data["post"])
+                self._on_post_callback(post, data)
         except Exception as e:
             print(f"[ws] message error: {e}")
 

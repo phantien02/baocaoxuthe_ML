@@ -16,7 +16,7 @@ class NetchatRestClient:
         self._channel_name = os.environ["NETCHAT_CHANNEL_NAME"]
         # Đặt sẵn NETCHAT_CHANNEL_ID thì khỏi cần tra cứu
         self._channel_id: str | None = os.environ.get("NETCHAT_CHANNEL_ID") or None
-        self._my_user_id: str | None = None
+        self._me: dict | None = None
         self._user_id_cache: dict[str, str] = {}
         self._session = requests.Session()
         # WAF nội bộ chặn theo User-Agent (python-requests/PowerShell/Postman bị 403
@@ -48,10 +48,16 @@ class NetchatRestClient:
             "thêm bot vào channel hoặc đặt NETCHAT_CHANNEL_ID trong .env"
         )
 
+    def get_me(self) -> dict:
+        if self._me is None:
+            self._me = self._api("GET", "/users/me")
+        return self._me
+
     def get_my_user_id(self) -> str:
-        if not self._my_user_id:
-            self._my_user_id = self._api("GET", "/users/me")["id"]
-        return self._my_user_id
+        return self.get_me()["id"]
+
+    def get_my_username(self) -> str:
+        return self.get_me()["username"]
 
     def get_user_id(self, username: str) -> str:
         # API chỉ nhận ID nội bộ 26 ký tự, không nhận username — luôn tra ID trước
@@ -95,13 +101,6 @@ class NetchatRestClient:
         cid = channel_id or self.get_channel_id()
         file_id = self.upload_file(file_path, cid)
         return self.post_message(message, cid, file_ids=[file_id])
-
-    def add_reaction(self, post_id: str, emoji_name: str = "thumbsup") -> dict:
-        return self._api("POST", "/reactions", json={
-            "user_id": self.get_my_user_id(),
-            "post_id": post_id,
-            "emoji_name": emoji_name,
-        })
 
     def download_file(self, file_id: str) -> bytes:
         url = f"{self._base_url}/api/v4/files/{file_id}"

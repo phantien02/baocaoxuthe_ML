@@ -41,7 +41,7 @@ def main() -> None:
 
     rest_client = NetchatRestClient()
     ws_client = NetchatWebSocketClient(
-        on_post_callback=lambda post: handle_post(post, rest_client)
+        on_post_callback=lambda post, event_data: handle_post(post, rest_client, event_data)
     )
 
     scheduler = init_scheduler(lambda: crawl_and_report(rest_client))
