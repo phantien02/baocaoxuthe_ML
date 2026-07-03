@@ -61,8 +61,7 @@ Mở file `.env` bằng Notepad và điền:
 | `NETCHAT_URL=` | Giữ nguyên `https://netchat.viettel.vn` |
 | `NETCHAT_BOT_URL=` | Giữ nguyên `https://bot-netchat.viettel.vn` |
 | `NETCHAT_TOKEN=` | Token của bot — xem chi tiết cách tạo trong `HUONG_DAN_CAI_DAT.md` (mục NETCHAT_TOKEN) |
-| `NETCHAT_TEAM_NAME=` | Tên team trên netChat — nhìn URL trình duyệt khi mở channel: `https://netchat.viettel.vn/<TEAM>/channels/<CHANNEL>` |
-| `NETCHAT_CHANNEL_NAME=` | Tên channel bot sẽ gửi báo cáo vào (phần `<CHANNEL>` trong URL trên). Bot phải được mời vào channel này trước. |
+| `NETCHAT_CHANNEL_NAME=` | Tên channel bot sẽ gửi báo cáo vào — nhìn URL trình duyệt khi mở channel: `https://netchat.viettel.vn/<team>/channels/<CHANNEL>`, lấy phần `<CHANNEL>`. Bot phải được mời vào channel này trước. |
 | `REPORT_SCHEDULE_DAY=` | Ngày gửi báo cáo hàng tuần, ví dụ `mon` (thứ 2) |
 | `REPORT_SCHEDULE_TIME=` | Giờ gửi, ví dụ `08:00` |
 | `DB_PATH=` | Giữ nguyên `/data/agent.db` |

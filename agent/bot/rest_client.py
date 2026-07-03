@@ -12,7 +12,6 @@ class NetchatRestClient:
         base = os.environ.get("NETCHAT_BOT_URL") or os.environ["NETCHAT_URL"]
         self._base_url = base.rstrip("/")
         self._token = os.environ["NETCHAT_TOKEN"]
-        self._team_name = os.environ["NETCHAT_TEAM_NAME"]
         self._channel_name = os.environ["NETCHAT_CHANNEL_NAME"]
         # Đặt sẵn NETCHAT_CHANNEL_ID thì khỏi cần tra cứu
         self._channel_id: str | None = os.environ.get("NETCHAT_CHANNEL_ID") or None

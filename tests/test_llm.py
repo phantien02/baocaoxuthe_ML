@@ -32,7 +32,7 @@ def test_generate_report_calls_correct_model():
     with patch("agent.llm.claude_client.get_client", return_value=mock_client):
         generate_report(SAMPLE_ITEMS, "Tuần 27/2026")
     call_kwargs = mock_client.models.generate_content.call_args.kwargs
-    assert call_kwargs["model"] == "gemini-2.0-flash"
+    assert call_kwargs["model"] == "gemini-test"  # lấy từ env GEMINI_MODEL (conftest)
     assert call_kwargs["config"].max_output_tokens == 4096
 
 

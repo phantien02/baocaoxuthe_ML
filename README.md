@@ -41,17 +41,18 @@ docker compose up -d --build
 
 | Biến | Mô tả | Ví dụ |
 |------|-------|-------|
-| `CLAUDE_API_KEY` | Anthropic API key | `sk-ant-...` |
-| `CLAUDE_MODEL` | Claude model ID | `claude-sonnet-4-6` |
-| `NETCHAT_URL` | Domain người dùng (WebSocket) | `https://netchat.viettel.vn` |
-| `NETCHAT_BOT_URL` | Domain bot (REST API — bắt buộc với Bot Token) | `https://bot-netchat.viettel.vn` |
-| `NETCHAT_TOKEN` | Bot token | `mm_xxx...` |
-| `NETCHAT_TEAM_NAME` | Tên team | `kttc` |
-| `NETCHAT_CHANNEL_NAME` | Tên channel | `core-network-report` |
-| `REPORT_SCHEDULE_DAY` | Ngày trong tuần (0=Thứ 2) | `0` |
-| `REPORT_SCHEDULE_TIME` | Giờ chạy (HH:MM) | `08:00` |
-| `REPORT_TIMEZONE` | Múi giờ | `Asia/Ho_Chi_Minh` |
-| `DB_PATH` | Đường dẫn SQLite DB | `/data/agent.db` |
+| `GEMINI_API_KEY` | Google Gemini API key (bắt buộc) | `AIza...` |
+| `GEMINI_MODEL` | Model Gemini (mặc định `gemini-2.0-flash`) | `gemini-3.5-flash` |
+| `NETCHAT_URL` | Domain người dùng — WebSocket (bắt buộc) | `https://netchat.viettel.vn` |
+| `NETCHAT_BOT_URL` | Domain bot — REST API, bắt buộc với Bot Token | `https://bot-netchat.viettel.vn` |
+| `NETCHAT_TOKEN` | Bot token (bắt buộc) | `wfce...` |
+| `NETCHAT_CHANNEL_NAME` | Tên (slug) channel báo cáo — bot phải là thành viên (bắt buộc) | `core-network-report` |
+| `NETCHAT_CHANNEL_ID` | Tùy chọn: chỉ định thẳng channel ID, bỏ qua tra cứu | `sar7som...` |
+| `NETCHAT_USER_AGENT` | Tùy chọn: UA cho REST (mặc định `curl/8.4.0` để qua WAF) | `curl/8.4.0` |
+| `REPORT_SCHEDULE_DAY` | Ngày gửi báo cáo tuần (mặc định `mon`) | `mon` |
+| `REPORT_SCHEDULE_TIME` | Giờ chạy HH:MM (mặc định `08:00`) | `08:00` |
+| `REPORT_TIMEZONE` | Múi giờ (mặc định `Asia/Ho_Chi_Minh`) | `Asia/Ho_Chi_Minh` |
+| `DB_PATH` | Đường dẫn SQLite DB (mặc định `/data/agent.db`) | `/data/agent.db` |
 
 ## Lệnh bot
 

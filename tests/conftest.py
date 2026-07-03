@@ -11,12 +11,11 @@ def isolated_db(tmp_path, monkeypatch):
 
 @pytest.fixture(autouse=True)
 def env_vars(monkeypatch):
-    monkeypatch.setenv("CLAUDE_API_KEY", "test-key")
-    monkeypatch.setenv("CLAUDE_MODEL", "claude-sonnet-4-6")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("GEMINI_MODEL", "gemini-test")
     monkeypatch.setenv("NETCHAT_URL", "https://netchat.test.vn")
     monkeypatch.setenv("NETCHAT_BOT_URL", "https://bot-netchat.test.vn")
     monkeypatch.setenv("NETCHAT_TOKEN", "mm_testtoken")
-    monkeypatch.setenv("NETCHAT_TEAM_NAME", "test-team")
     monkeypatch.setenv("NETCHAT_CHANNEL_NAME", "test-channel")
     monkeypatch.setenv("REPORT_SCHEDULE_DAY", "mon")
     monkeypatch.setenv("REPORT_SCHEDULE_TIME", "08:00")

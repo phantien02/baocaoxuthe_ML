@@ -19,7 +19,7 @@ notepad .env
 - Miễn phí, không cần thẻ ngân hàng
 
 ### GEMINI_MODEL
-- Giữ nguyên: `gemini-2.0-flash` (miễn phí, đủ dùng)
+- Giữ nguyên theo `.env.example` (hiện là `gemini-3.5-flash`)
 
 ---
 
@@ -40,18 +40,18 @@ notepad .env
 - Đặt tên bất kỳ (ví dụ: `bot-baocao`) → **Save**
 - Copy token dạng `mm_xxxxxxxxxxxxx...`
 
-### NETCHAT_TEAM_NAME và NETCHAT_CHANNEL_NAME
+### NETCHAT_CHANNEL_NAME
 Mở Netchat trên **trình duyệt**, vào đúng channel muốn bot post báo cáo vào.
 Nhìn URL trên thanh địa chỉ:
 
 ```
 https://netchat.viettel.vn/kttc-core/channels/core-network-report
-                             ─────────         ────────────────────
-                          TEAM_NAME              CHANNEL_NAME
+                                               ────────────────────
+                                                 CHANNEL_NAME
 ```
 
-- **TEAM_NAME** = phần ngay sau `netchat.viettel.vn/`
 - **CHANNEL_NAME** = phần sau `/channels/`
+- Bot phải được **mời vào channel** này trước (bot tra channel qua danh sách channel nó tham gia)
 
 > Lưu ý: đây là slug trong URL, **không phải tên hiển thị** trên giao diện.
 > Ví dụ tên hiển thị "KTTC Core Network" nhưng slug URL có thể là `kttc-core`.
