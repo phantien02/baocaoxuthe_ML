@@ -58,7 +58,7 @@
 ## 5. Việc tiếp theo cần làm (backlog)
 
 1. **Sửa 3 nguồn hỏng/thiếu** (mục 4): tìm nguồn thay thế cho Ericsson/Huawei; tìm cách lấy ngày xuất bản cho Nokia (vào trang chi tiết từng bài hoặc tìm feed khác).
-2. ~~Deploy server chính thức~~ ✅ Xong 03/07/2026 (GCP, xem `HUONG_DAN_DEPLOY_SERVER.md`). Còn lại: xác nhận crawler chạy tốt từ IP GCP (GSMA/ETSI trả 403 ở trang gốc khi curl — cần chạy thử crawl từ server), và cân nhắc chuyển DB tháng 6 từ máy local sang.
+2. ~~Deploy server chính thức~~ ✅ Xong 03/07/2026 (GCP, xem `HUONG_DAN_DEPLOY_SERVER.md`). Crawler đã xác nhận chạy tốt từ server (3gpp 22 / gsma 10 / etsi 15 / nokia 8 bài). Tùy chọn còn lại: chuyển DB tháng 6 từ máy local sang (mục 4 hướng dẫn deploy).
 3. Cân nhắc lưu **lịch sử hội thoại** cho chat tự nhiên (hiện mỗi tin nhắn trả lời độc lập, bot không nhớ câu trước).
 4. Retry/backoff khi Gemini 503 trong luồng chạy tự động (script backfill đã có, luồng scheduler chưa có).
 5. Giới hạn độ dài tin nhắn gửi Netchat (báo cáo quá dài có thể vượt giới hạn ký tự 1 post).
