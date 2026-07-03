@@ -7,11 +7,11 @@
 
 | Hạng mục | Trạng thái |
 |---|---|
-| Môi trường chạy | ✅ Docker local (máy tienpc1), container `baocaoxuthe-agent` |
-| Bot Netchat | ✅ Đang chạy, kết nối WebSocket ổn định, channel `ai_bot_clm_tienpc1` |
+| Môi trường chạy | ✅ **Server GCP** `35.247.154.93` — `/opt/apps/baocaoxuthe`, container `baocaoxuthe-agent` (deploy 03/07/2026) |
+| Bot Netchat | ✅ Đang chạy 24/7 trên server, WebSocket ổn định, channel `ai_bot_clm_tienpc1` |
+| Docker local (máy tienpc1) | ⏸️ Đã tắt (`docker compose down`) để tránh 2 bot trả lời trùng; volume DB tháng 6 vẫn còn trên máy local |
 | Test tự động | ✅ 69/69 pass (`python -m pytest tests/`) |
 | GitHub | https://github.com/phantien02/baocaoxuthe_ML (nhánh `master`) |
-| Deploy server chính thức | ⬜ Chưa — đang chạy local để test |
 
 ## 2. Chức năng đã hoàn thành
 
@@ -58,7 +58,7 @@
 ## 5. Việc tiếp theo cần làm (backlog)
 
 1. **Sửa 3 nguồn hỏng/thiếu** (mục 4): tìm nguồn thay thế cho Ericsson/Huawei; tìm cách lấy ngày xuất bản cho Nokia (vào trang chi tiết từng bài hoặc tìm feed khác).
-2. **Deploy server chính thức** (thay vì Docker local) — cần chọn server nội bộ có thể gọi ra internet + tới netchat.
+2. ~~Deploy server chính thức~~ ✅ Xong 03/07/2026 (GCP, xem `HUONG_DAN_DEPLOY_SERVER.md`). Còn lại: xác nhận crawler chạy tốt từ IP GCP (GSMA/ETSI trả 403 ở trang gốc khi curl — cần chạy thử crawl từ server), và cân nhắc chuyển DB tháng 6 từ máy local sang.
 3. Cân nhắc lưu **lịch sử hội thoại** cho chat tự nhiên (hiện mỗi tin nhắn trả lời độc lập, bot không nhớ câu trước).
 4. Retry/backoff khi Gemini 503 trong luồng chạy tự động (script backfill đã có, luồng scheduler chưa có).
 5. Giới hạn độ dài tin nhắn gửi Netchat (báo cáo quá dài có thể vượt giới hạn ký tự 1 post).
