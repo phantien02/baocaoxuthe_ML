@@ -7,7 +7,7 @@
 
 | Hạng mục | Trạng thái |
 |---|---|
-| Môi trường chạy | ✅ Docker local (máy tienpc1), container `agent_baocaoxuthe-agent-1` |
+| Môi trường chạy | ✅ Docker local (máy tienpc1), container `baocaoxuthe-agent` |
 | Bot Netchat | ✅ Đang chạy, kết nối WebSocket ổn định, channel `ai_bot_clm_tienpc1` |
 | Test tự động | ✅ 69/69 pass (`python -m pytest tests/`) |
 | GitHub | https://github.com/phantien02/baocaoxuthe_ML (nhánh `master`) |

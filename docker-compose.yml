@@ -1,12 +1,23 @@
-version: "3.9"
-
 services:
   agent:
     build: .
+    image: baocaoxuthe-agent:latest
+    container_name: baocaoxuthe-agent
     env_file: .env
     volumes:
       - agent_data:/data
     restart: unless-stopped
+    # Chặn log container phình vô hạn làm đầy đĩa server
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    # Nếu server ra internet qua proxy thì bỏ comment và điền:
+    # environment:
+    #   HTTP_PROXY: "http://proxy.noibo:3128"
+    #   HTTPS_PROXY: "http://proxy.noibo:3128"
+    #   NO_PROXY: "netchat.viettel.vn,bot-netchat.viettel.vn,localhost,127.0.0.1"
 
 volumes:
   agent_data:

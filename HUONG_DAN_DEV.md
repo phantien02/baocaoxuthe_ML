@@ -22,7 +22,7 @@ Chạy chuẩn bằng Docker (tự nạp `.env`, DB nằm ở volume `agent_data
 
 ```bash
 docker compose up -d --build
-docker logs -f agent_baocaoxuthe-agent-1
+docker logs -f baocaoxuthe-agent
 ```
 
 ## Các điểm BẮT BUỘC phải biết (đặc thù môi trường Viettel)
@@ -42,7 +42,7 @@ docker logs -f agent_baocaoxuthe-agent-1
 3. Test tích hợp thật trong container:
    ```bash
    docker compose up -d --build
-   docker exec agent_baocaoxuthe-agent-1 python -c "from agent.bot.rest_client import NetchatRestClient; c=NetchatRestClient(); print(c.get_my_user_id())"
+   docker exec baocaoxuthe-agent python -c "from agent.bot.rest_client import NetchatRestClient; c=NetchatRestClient(); print(c.get_my_user_id())"
    ```
 4. Commit theo conventional commits (`feat:`, `fix:`, `docs:`...), cập nhật `TIEN_DO_DU_AN.md` nếu thay đổi đáng kể.
 5. **Không bao giờ commit `.env`** (đã gitignore) và không dán token thật vào `.env.example`/tài liệu.
@@ -66,7 +66,7 @@ docker logs -f agent_baocaoxuthe-agent-1
 **Chạy tay báo cáo theo khoảng ngày** (backfill):
 
 ```bash
-docker exec -w /app -e PYTHONPATH=/app agent_baocaoxuthe-agent-1 python - <<'EOF'
+docker exec -w /app -e PYTHONPATH=/app baocaoxuthe-agent python - <<'EOF'
 from agent.storage.database import init_db, get_items_between, save_report
 from agent.llm.claude_client import generate_report
 from agent.bot.rest_client import NetchatRestClient

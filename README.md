@@ -8,6 +8,7 @@ Agent tự động crawl tin tức công nghệ mạng Core Network và tạo b�
 |---|---|
 | [HUONG_DAN_SU_DUNG_NEWBIE.md](HUONG_DAN_SU_DUNG_NEWBIE.md) | Người mới hoàn toàn — cài đặt và dùng từ A-Z |
 | [HUONG_DAN_DEV.md](HUONG_DAN_DEV.md) | Dev — setup, quy trình, cạm bẫy môi trường Viettel |
+| [HUONG_DAN_DEPLOY_SERVER.md](HUONG_DAN_DEPLOY_SERVER.md) | Deploy lên server Linux, quy hoạch server nhiều project |
 | [LLD.md](LLD.md) | Thiết kế chi tiết: kiến trúc, công nghệ, luồng dữ liệu |
 | [TIEN_DO_DU_AN.md](TIEN_DO_DU_AN.md) | Tiến độ, hiện trạng, backlog |
 | [HUONG_DAN_CAI_DAT.md](HUONG_DAN_CAI_DAT.md) | Cách lấy các API key/token cho `.env` |

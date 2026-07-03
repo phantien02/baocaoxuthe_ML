@@ -81,7 +81,7 @@ Lần đầu sẽ mất vài phút tải về. Khi hiện dòng `Started` là xo
 ### Kiểm tra bot sống chưa
 
 ```cmd
-docker logs agent_baocaoxuthe-agent-1
+docker logs baocaoxuthe-agent
 ```
 
 Thấy 2 dòng này là bot đã chạy tốt:
@@ -113,7 +113,7 @@ Báo cáo tuần sẽ **tự động** được gửi vào channel theo lịch t
 docker ps
 
 :: Xem log (100 dòng cuối)
-docker logs --tail 100 agent_baocaoxuthe-agent-1
+docker logs --tail 100 baocaoxuthe-agent
 
 :: Tắt bot
 docker compose down
