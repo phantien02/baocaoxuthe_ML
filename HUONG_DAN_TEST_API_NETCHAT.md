@@ -214,6 +214,68 @@ Response thành công: trong `metadata.files` đã xuất hiện `post_id` — f
 - channel_id khi upload (Bước 1) và khi post (Bước 2) phải **cùng một channel**.
 - Upload nhiều file trong 1 request: lặp lại cờ `-F "files=@..."` nhiều lần — response trả về nhiều phần tử trong file_infos.
 
+### 4.3. Thả reaction vào tin nhắn
+
+> ⚠️ **KHÔNG SỬ DỤNG để code dự án baocaoxuthe** — giữ lại để tham khảo khi cần sau này.
+
+```cmd
+curl -X POST "https://bot-netchat.viettel.vn/api/v4/reactions" ^
+  -H "Authorization: Bearer <TOKEN>" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"user_id\":\"<USER_ID_BOT>\",\"post_id\":\"<POST_ID>\",\"emoji_name\":\"thumbsup\"}"
+```
+
+Field `id` trong response của POST /posts (mục 3) chính là post_id cần dùng ở đây.
+
+### 4.4. Tạo channel mới
+
+> ⚠️ **KHÔNG SỬ DỤNG để code dự án baocaoxuthe** — giữ lại để tham khảo khi cần sau này.
+
+Cần `team_id`. Type: `"O"` = public, `"P"` = private.
+
+```cmd
+curl -X POST "https://bot-netchat.viettel.vn/api/v4/channels" ^
+  -H "Authorization: Bearer <TOKEN>" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"team_id\":\"<TEAM_ID>\",\"name\":\"test-channel-01\",\"display_name\":\"Test Channel 01\",\"type\":\"O\"}"
+```
+
+### 4.5. Quản lý thành viên channel
+
+> ⚠️ **KHÔNG SỬ DỤNG để code dự án baocaoxuthe** — giữ lại để tham khảo khi cần sau này.
+
+Thêm thành viên:
+
+```cmd
+curl -X POST "https://bot-netchat.viettel.vn/api/v4/channels/<CHANNEL_ID>/members" ^
+  -H "Authorization: Bearer <TOKEN>" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"user_id\":\"<USER_ID>\"}"
+```
+
+Xoá thành viên:
+
+```cmd
+curl -X DELETE "https://bot-netchat.viettel.vn/api/v4/channels/<CHANNEL_ID>/members/<USER_ID>" ^
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+Xem danh sách thành viên:
+
+```cmd
+curl -X GET "https://bot-netchat.viettel.vn/api/v4/channels/<CHANNEL_ID>/members" ^
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+Gán quyền admin trong channel:
+
+```cmd
+curl -X PUT "https://bot-netchat.viettel.vn/api/v4/channels/<CHANNEL_ID>/members/<USER_ID>/schemeRoles" ^
+  -H "Authorization: Bearer <TOKEN>" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"scheme_admin\":true,\"scheme_user\":true}"
+```
+
 ## 5. Bảng lỗi thường gặp và cách xử lý
 
 | Lỗi | Nguyên nhân | Cách xử lý |

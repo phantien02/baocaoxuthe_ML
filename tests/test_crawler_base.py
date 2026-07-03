@@ -23,18 +23,19 @@ def test_base_crawler_requires_crawl():
 
 
 @resp_lib.activate
-def test_3gpp_crawler_returns_list_on_valid_html():
+def test_3gpp_crawler_parses_rss():
     resp_lib.add(
         resp_lib.GET,
-        "https://www.3gpp.org/news-events/3gpp-news",
-        body="""
-        <html><body>
-          <article>
-            <h3><a href="/news/5gc-update">5GC NWDAF Release 19 Update</a></h3>
-            <p class="summary">New features for network automation in Release 19.</p>
-          </article>
-        </body></html>
-        """,
+        Crawler3GPP.FEED_URL,
+        body="""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+  <item>
+    <title>5GC NWDAF Release 19 Update</title>
+    <link>https://www.3gpp.org/news/5gc-update</link>
+    <description>New features for network automation in Release 19.</description>
+    <pubDate>Thu, 25 Jun 2026 09:00:00 +0000</pubDate>
+  </item>
+</channel></rss>""",
         status=200,
     )
     crawler = Crawler3GPP()
@@ -42,6 +43,7 @@ def test_3gpp_crawler_returns_list_on_valid_html():
     assert isinstance(items, list)
     assert len(items) == 1
     assert items[0].source == "3gpp"
+    assert items[0].date == "2026-06-25 09:00:00"
     assert items[0].topic in ("5GC", "IMS", "EPC", "Autonomous", "General")
 
 
@@ -49,7 +51,7 @@ def test_3gpp_crawler_returns_list_on_valid_html():
 def test_3gpp_crawler_returns_empty_on_http_error():
     resp_lib.add(
         resp_lib.GET,
-        "https://www.3gpp.org/news-events/3gpp-news",
+        Crawler3GPP.FEED_URL,
         status=500,
     )
     items = Crawler3GPP().crawl()

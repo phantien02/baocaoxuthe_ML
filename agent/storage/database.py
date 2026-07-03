@@ -25,6 +25,7 @@ def init_db() -> None:
                 url TEXT UNIQUE NOT NULL,
                 content TEXT,
                 topic TEXT,
+                published_at TIMESTAMP,
                 crawled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 used_in_report BOOLEAN DEFAULT 0
             );
@@ -45,14 +46,21 @@ def init_db() -> None:
                 uploaded_by TEXT
             );
         """)
+        # Migration cho DB tạo trước khi có cột published_at
+        try:
+            conn.execute("ALTER TABLE crawled_items ADD COLUMN published_at TIMESTAMP")
+        except sqlite3.OperationalError:
+            pass  # cột đã tồn tại
 
 
-def save_crawled_item(source: str, title: str, url: str, content: str, topic: str) -> bool:
+def save_crawled_item(source: str, title: str, url: str, content: str, topic: str,
+                      published_at: str | None = None) -> bool:
     try:
         with get_connection() as conn:
             conn.execute(
-                "INSERT INTO crawled_items (source, title, url, content, topic) VALUES (?, ?, ?, ?, ?)",
-                (source, title, url, content, topic),
+                "INSERT INTO crawled_items (source, title, url, content, topic, published_at)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
+                (source, title, url, content, topic, published_at),
             )
         return True
     except sqlite3.IntegrityError:
@@ -60,11 +68,26 @@ def save_crawled_item(source: str, title: str, url: str, content: str, topic: st
 
 
 def get_recent_items(days: int = 7) -> list[dict]:
+    # Ưu tiên ngày xuất bản; bài không có ngày thì dùng thời điểm crawl
     with get_connection() as conn:
         rows = conn.execute(
-            "SELECT * FROM crawled_items WHERE crawled_at >= datetime('now', ?)"
-            " ORDER BY crawled_at DESC",
+            "SELECT * FROM crawled_items"
+            " WHERE COALESCE(published_at, crawled_at) >= datetime('now', ?)"
+            " ORDER BY COALESCE(published_at, crawled_at) DESC",
             (f"-{days} days",),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+
+def get_items_between(start: str, end: str) -> list[dict]:
+    """Lấy bài có ngày (xuất bản, hoặc crawl nếu thiếu) trong [start, end) — định dạng 'YYYY-MM-DD'."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM crawled_items"
+            " WHERE COALESCE(published_at, crawled_at) >= ?"
+            " AND COALESCE(published_at, crawled_at) < ?"
+            " ORDER BY COALESCE(published_at, crawled_at) ASC",
+            (start, end),
         ).fetchall()
         return [dict(row) for row in rows]
 

@@ -1,6 +1,6 @@
 import pytest
 from agent.storage.database import (
-    init_db, save_crawled_item, get_recent_items,
+    init_db, save_crawled_item, get_recent_items, get_items_between,
     save_report, get_last_crawl_time, save_uploaded_doc,
 )
 
@@ -34,6 +34,19 @@ def test_get_recent_items_returns_saved():
     items = get_recent_items(days=7)
     assert len(items) >= 1
     assert items[0]["title"] == "GSMA Post"
+
+
+def test_get_items_between_filters_by_published_date():
+    init_db()
+    save_crawled_item("3gpp", "June wk1", "https://x.com/w1", "c", "5GC",
+                      published_at="2026-06-03 10:00:00")
+    save_crawled_item("3gpp", "June wk3", "https://x.com/w3", "c", "5GC",
+                      published_at="2026-06-17 10:00:00")
+    save_crawled_item("3gpp", "No date", "https://x.com/nd", "c", "5GC")  # rơi về crawled_at (hôm nay)
+    wk1 = get_items_between("2026-06-01", "2026-06-08")
+    assert [i["title"] for i in wk1] == ["June wk1"]
+    wk3 = get_items_between("2026-06-15", "2026-06-22")
+    assert [i["title"] for i in wk3] == ["June wk3"]
 
 
 def test_save_report_returns_id():

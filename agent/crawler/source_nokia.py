@@ -1,6 +1,5 @@
 from bs4 import BeautifulSoup
 from .base import BaseCrawler, CrawledItem
-from .source_3gpp import Crawler3GPP
 
 
 class CrawlerNokia(BaseCrawler):
@@ -12,7 +11,6 @@ class CrawlerNokia(BaseCrawler):
             html = self._get_html(self.BASE_URL)
             soup = BeautifulSoup(html, "html.parser")
             items = []
-            detector = Crawler3GPP()
             for card in soup.select("article, .news-item, .card")[:15]:
                 title_tag = card.select_one("h3 a, h2 a, h3, h2")
                 link_tag = card.select_one("a[href]")
@@ -25,7 +23,7 @@ class CrawlerNokia(BaseCrawler):
                 content = summary_tag.get_text(strip=True) if summary_tag else title
                 items.append(CrawledItem(
                     source=self.source_name, title=title, url=url,
-                    content=content, topic=detector._detect_topic(title + " " + content),
+                    content=content, topic=self._detect_topic(title + " " + content),
                 ))
             return items
         except Exception as e:

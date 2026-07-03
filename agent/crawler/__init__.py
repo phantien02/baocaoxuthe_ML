@@ -21,6 +21,7 @@ def run_all_crawlers() -> int:
     for crawler in CRAWLERS:
         items = crawler.crawl()
         for item in items:
-            if save_crawled_item(item.source, item.title, item.url, item.content, item.topic):
+            if save_crawled_item(item.source, item.title, item.url, item.content, item.topic,
+                                 published_at=item.date):
                 total_new += 1
     return total_new

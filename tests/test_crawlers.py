@@ -1,5 +1,6 @@
 import pytest
 import responses as resp_lib
+from agent.crawler.source_3gpp import Crawler3GPP
 from agent.crawler.source_gsma import CrawlerGSMA
 from agent.crawler.source_etsi import CrawlerETSI
 from agent.crawler.source_ericsson import CrawlerEricsson
@@ -8,8 +9,9 @@ from agent.crawler.source_huawei import CrawlerHuawei
 
 
 CRAWLERS_UNDER_TEST = [
-    (CrawlerGSMA, "https://www.gsma.com/solutions-and-impact/technologies/networks/"),
-    (CrawlerETSI, "https://www.etsi.org/news-events/news"),
+    (Crawler3GPP, Crawler3GPP.FEED_URL),
+    (CrawlerGSMA, CrawlerGSMA.FEED_URL),
+    (CrawlerETSI, CrawlerETSI.FEED_URL),
     (CrawlerEricsson, "https://www.ericsson.com/en/blog/tags/core-network"),
     (CrawlerNokia, "https://www.nokia.com/about-us/news/"),
     (CrawlerHuawei, "https://carrier.huawei.com/en/insights"),
@@ -53,25 +55,47 @@ def test_ericsson_parses_article():
     assert items[0].topic in ("5GC", "Autonomous", "IMS", "EPC", "General")
 
 
+RSS_BODY = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+  <title>Feed</title>
+  <item>
+    <title>5G Autonomous Networks</title>
+    <link>https://example.com/news/5g-autonomous</link>
+    <description><![CDATA[<p>Self-managing networks with ZSM.</p>]]></description>
+    <pubDate>Wed, 10 Jun 2026 08:30:00 +0000</pubDate>
+  </item>
+  <item>
+    <title>5GC NWDAF analytics</title>
+    <link>https://example.com/news/nwdaf</link>
+    <description>AI/ML analytics in the 5G Core.</description>
+    <pubDate>Mon, 22 Jun 2026 10:00:00 +0000</pubDate>
+  </item>
+</channel></rss>"""
+
+
 @resp_lib.activate
-def test_gsma_parses_article():
-    resp_lib.add(
-        resp_lib.GET,
-        "https://www.gsma.com/solutions-and-impact/technologies/networks/",
-        body="""
-        <html><body>
-          <article>
-            <h2><a href="/news/5g-autonomous">5G Autonomous Networks</a></h2>
-            <p>Self-managing networks with ZSM.</p>
-          </article>
-        </body></html>
-        """,
-        status=200,
-    )
+def test_gsma_parses_rss_with_publish_dates():
+    resp_lib.add(resp_lib.GET, CrawlerGSMA.FEED_URL, body=RSS_BODY, status=200)
     items = CrawlerGSMA().crawl()
-    assert len(items) == 1
+    assert len(items) == 2
     assert items[0].source == "gsma"
     assert items[0].title == "5G Autonomous Networks"
+    assert items[0].date == "2026-06-10 08:30:00"
+    assert "Self-managing" in items[0].content  # HTML trong description được bóc sạch
+    assert items[1].date == "2026-06-22 10:00:00"
+
+
+@resp_lib.activate
+def test_3gpp_rss_topic_detection():
+    resp_lib.add(resp_lib.GET, Crawler3GPP.FEED_URL, body=RSS_BODY, status=200)
+    items = Crawler3GPP().crawl()
+    assert items[1].topic == "5GC"
+
+
+@resp_lib.activate
+def test_rss_crawler_returns_empty_on_invalid_xml():
+    resp_lib.add(resp_lib.GET, CrawlerETSI.FEED_URL, body="not xml at all <<<", status=200)
+    assert CrawlerETSI().crawl() == []
 
 
 @resp_lib.activate
