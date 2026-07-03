@@ -2,27 +2,39 @@
 
 Agent tự động crawl tin tức công nghệ mạng Core Network và tạo báo cáo xu thế hàng tuần, giao tiếp qua Netchat (Mattermost-compatible).
 
+## Tài liệu
+
+| File | Dành cho |
+|---|---|
+| [HUONG_DAN_SU_DUNG_NEWBIE.md](HUONG_DAN_SU_DUNG_NEWBIE.md) | Người mới hoàn toàn — cài đặt và dùng từ A-Z |
+| [HUONG_DAN_DEV.md](HUONG_DAN_DEV.md) | Dev — setup, quy trình, cạm bẫy môi trường Viettel |
+| [LLD.md](LLD.md) | Thiết kế chi tiết: kiến trúc, công nghệ, luồng dữ liệu |
+| [TIEN_DO_DU_AN.md](TIEN_DO_DU_AN.md) | Tiến độ, hiện trạng, backlog |
+| [HUONG_DAN_CAI_DAT.md](HUONG_DAN_CAI_DAT.md) | Cách lấy các API key/token cho `.env` |
+| [HUONG_DAN_TEST_API_NETCHAT.md](HUONG_DAN_TEST_API_NETCHAT.md) | Test API Netchat bằng curl |
+
 ## Tính năng
 
-- Crawl tự động từ 6 nguồn: 3GPP, GSMA, ETSI, Ericsson, Nokia, Huawei
-- Tạo báo cáo song ngữ (VI tổng quan + EN kỹ thuật) dùng Claude AI
+- Crawl tự động từ các nguồn: 3GPP, GSMA, ETSI (RSS — có ngày xuất bản), Nokia (HTML); Ericsson/Huawei đang chờ nguồn thay thế
+- Tạo báo cáo song ngữ (VI tổng quan + EN kỹ thuật) dùng Google Gemini
 - Nhận lệnh qua Netchat: `!report`, `!status`, `!sources`, `!help`
+- **Chat tự nhiên**: nhắn riêng (DM) hoặc `@bot` trong nhóm bất kỳ
 - Tóm tắt tài liệu PDF/DOCX đính kèm
-- Lịch báo cáo tự động hàng tuần (APScheduler)
-- Lưu trữ SQLite, deploy Docker trên GCP VM
+- Lịch báo cáo tự động hàng tuần (APScheduler); backfill báo cáo theo khoảng ngày
+- Lưu trữ SQLite, deploy Docker
 
 ## Yêu cầu
 
 - Docker + Docker Compose
-- Claude API key (Anthropic)
-- Netchat bot token (`mm_xxx` format)
+- Gemini API key (Google AI Studio)
+- Netchat bot token
 
 ## Cài đặt
 
 ```bash
 cp .env.example .env
 # Điền các biến môi trường trong .env
-docker-compose up -d
+docker compose up -d --build
 ```
 
 ## Biến môi trường
