@@ -8,14 +8,16 @@ from agent.bot.rest_client import NetchatRestClient
 BOT = "https://bot-netchat.test.vn/api/v4"
 
 
+# Gateway bot chỉ cho phép /users/me/channels — tra channel bằng cách lọc theo tên
+MY_CHANNELS = [
+    {"id": "dm1", "name": "botid__userid", "type": "D"},
+    {"id": "chan123", "name": "test-channel", "type": "P"},
+]
+
+
 @resp_lib.activate
 def test_get_channel_id():
-    resp_lib.add(
-        resp_lib.GET,
-        f"{BOT}/channels/name/test-team/test-channel",
-        json={"id": "chan123", "name": "test-channel"},
-        status=200,
-    )
+    resp_lib.add(resp_lib.GET, f"{BOT}/users/me/channels", json=MY_CHANNELS, status=200)
     client = NetchatRestClient()
     cid = client.get_channel_id()
     assert cid == "chan123"
@@ -23,26 +25,30 @@ def test_get_channel_id():
 
 @resp_lib.activate
 def test_get_channel_id_cached():
-    resp_lib.add(
-        resp_lib.GET,
-        f"{BOT}/channels/name/test-team/test-channel",
-        json={"id": "chan123"},
-        status=200,
-    )
+    resp_lib.add(resp_lib.GET, f"{BOT}/users/me/channels", json=MY_CHANNELS, status=200)
     client = NetchatRestClient()
     client.get_channel_id()
     client.get_channel_id()  # second call must not re-hit API
     assert len(resp_lib.calls) == 1
 
 
+def test_get_channel_id_from_env(monkeypatch):
+    monkeypatch.setenv("NETCHAT_CHANNEL_ID", "preset_chan")
+    client = NetchatRestClient()
+    assert client.get_channel_id() == "preset_chan"  # no API call needed
+
+
+@resp_lib.activate
+def test_get_channel_id_not_a_member():
+    resp_lib.add(resp_lib.GET, f"{BOT}/users/me/channels", json=[], status=200)
+    client = NetchatRestClient()
+    with pytest.raises(RuntimeError):
+        client.get_channel_id()
+
+
 @resp_lib.activate
 def test_rest_uses_bot_domain_not_user_domain():
-    resp_lib.add(
-        resp_lib.GET,
-        f"{BOT}/channels/name/test-team/test-channel",
-        json={"id": "chan123"},
-        status=200,
-    )
+    resp_lib.add(resp_lib.GET, f"{BOT}/users/me/channels", json=MY_CHANNELS, status=200)
     client = NetchatRestClient()
     client.get_channel_id()
     assert resp_lib.calls[0].request.url.startswith("https://bot-netchat.test.vn/")
@@ -50,12 +56,7 @@ def test_rest_uses_bot_domain_not_user_domain():
 
 @resp_lib.activate
 def test_post_message():
-    resp_lib.add(
-        resp_lib.GET,
-        f"{BOT}/channels/name/test-team/test-channel",
-        json={"id": "chan123"},
-        status=200,
-    )
+    resp_lib.add(resp_lib.GET, f"{BOT}/users/me/channels", json=MY_CHANNELS, status=200)
     resp_lib.add(
         resp_lib.POST,
         f"{BOT}/posts",

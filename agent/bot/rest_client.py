@@ -14,11 +14,18 @@ class NetchatRestClient:
         self._token = os.environ["NETCHAT_TOKEN"]
         self._team_name = os.environ["NETCHAT_TEAM_NAME"]
         self._channel_name = os.environ["NETCHAT_CHANNEL_NAME"]
-        self._channel_id: str | None = None
+        # Đặt sẵn NETCHAT_CHANNEL_ID thì khỏi cần tra cứu
+        self._channel_id: str | None = os.environ.get("NETCHAT_CHANNEL_ID") or None
         self._my_user_id: str | None = None
         self._user_id_cache: dict[str, str] = {}
         self._session = requests.Session()
-        self._session.headers.update({"Authorization": f"Bearer {self._token}"})
+        # WAF nội bộ chặn theo User-Agent (python-requests/PowerShell/Postman bị 403
+        # trang HTML; curl đi qua được) — xem mục 1.2 và mục 5 HUONG_DAN_TEST_API_NETCHAT.md
+        user_agent = os.environ.get("NETCHAT_USER_AGENT", "curl/8.4.0")
+        self._session.headers.update({
+            "Authorization": f"Bearer {self._token}",
+            "User-Agent": user_agent,
+        })
 
     def _api(self, method: str, path: str, **kwargs):
         url = f"{self._base_url}/api/v4{path}"
@@ -29,9 +36,17 @@ class NetchatRestClient:
     def get_channel_id(self) -> str:
         if self._channel_id:
             return self._channel_id
-        data = self._api("GET", f"/channels/name/{self._team_name}/{self._channel_name}")
-        self._channel_id = data["id"]
-        return self._channel_id
+        # Gateway bot chặn /channels/name/{team}/{channel} (api.bot.endpoint_not_allowed);
+        # /users/me/channels được phép nên liệt kê rồi lọc theo tên channel
+        channels = self._api("GET", "/users/me/channels")
+        for ch in channels:
+            if ch.get("name") == self._channel_name:
+                self._channel_id = ch["id"]
+                return self._channel_id
+        raise RuntimeError(
+            f"Bot không phải thành viên channel '{self._channel_name}' — "
+            "thêm bot vào channel hoặc đặt NETCHAT_CHANNEL_ID trong .env"
+        )
 
     def get_my_user_id(self) -> str:
         if not self._my_user_id:
