@@ -6,6 +6,8 @@ import websocket
 
 class NetchatWebSocketClient:
     def __init__(self, on_post_callback):
+        # WebSocket kết nối qua domain người dùng (NETCHAT_URL);
+        # riêng REST với Bot Token phải đi qua NETCHAT_BOT_URL (xem rest_client.py)
         self._base_url = os.environ["NETCHAT_URL"].rstrip("/")
         self._token = os.environ["NETCHAT_TOKEN"]
         self._on_post_callback = on_post_callback

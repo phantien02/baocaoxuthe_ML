@@ -31,7 +31,8 @@ docker-compose up -d
 |------|-------|-------|
 | `CLAUDE_API_KEY` | Anthropic API key | `sk-ant-...` |
 | `CLAUDE_MODEL` | Claude model ID | `claude-sonnet-4-6` |
-| `NETCHAT_URL` | URL Netchat server | `https://netchat.viettel.vn` |
+| `NETCHAT_URL` | Domain người dùng (WebSocket) | `https://netchat.viettel.vn` |
+| `NETCHAT_BOT_URL` | Domain bot (REST API — bắt buộc với Bot Token) | `https://bot-netchat.viettel.vn` |
 | `NETCHAT_TOKEN` | Bot token | `mm_xxx...` |
 | `NETCHAT_TEAM_NAME` | Tên team | `kttc` |
 | `NETCHAT_CHANNEL_NAME` | Tên channel | `core-network-report` |

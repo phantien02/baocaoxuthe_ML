@@ -14,6 +14,7 @@ def env_vars(monkeypatch):
     monkeypatch.setenv("CLAUDE_API_KEY", "test-key")
     monkeypatch.setenv("CLAUDE_MODEL", "claude-sonnet-4-6")
     monkeypatch.setenv("NETCHAT_URL", "https://netchat.test.vn")
+    monkeypatch.setenv("NETCHAT_BOT_URL", "https://bot-netchat.test.vn")
     monkeypatch.setenv("NETCHAT_TOKEN", "mm_testtoken")
     monkeypatch.setenv("NETCHAT_TEAM_NAME", "test-team")
     monkeypatch.setenv("NETCHAT_CHANNEL_NAME", "test-channel")

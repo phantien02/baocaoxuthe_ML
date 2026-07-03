@@ -24,7 +24,13 @@ notepad .env
 ---
 
 ### NETCHAT_URL
-- Giữ nguyên: `https://netchat.viettel.vn`
+- Giữ nguyên: `https://netchat.viettel.vn` (domain người dùng — dùng cho WebSocket)
+
+### NETCHAT_BOT_URL
+- Giữ nguyên: `https://bot-netchat.viettel.vn`
+- Đây là domain BẮT BUỘC cho REST API khi dùng Bot Token. Nếu gọi nhầm qua
+  `netchat.viettel.vn` sẽ bị lỗi 403 *"API bot phải được gọi qua BMS kèm header
+  xác minh hợp lệ"* (xem `HUONG_DAN_TEST_API_NETCHAT.md`)
 
 ### NETCHAT_TOKEN
 - Mở Netchat trên trình duyệt

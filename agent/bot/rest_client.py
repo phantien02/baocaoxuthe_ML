@@ -1,14 +1,22 @@
 import os
 import requests
 
+# Giới hạn của netChat: 1 post gắn tối đa 5 file
+MAX_FILES_PER_POST = 5
+
 
 class NetchatRestClient:
     def __init__(self):
-        self._base_url = os.environ["NETCHAT_URL"].rstrip("/")
+        # Bot Token bắt buộc gọi REST qua domain bot (bot-netchat.viettel.vn).
+        # Gọi nhầm sang domain người dùng sẽ bị 403 "API bot phải được gọi qua BMS".
+        base = os.environ.get("NETCHAT_BOT_URL") or os.environ["NETCHAT_URL"]
+        self._base_url = base.rstrip("/")
         self._token = os.environ["NETCHAT_TOKEN"]
         self._team_name = os.environ["NETCHAT_TEAM_NAME"]
         self._channel_name = os.environ["NETCHAT_CHANNEL_NAME"]
         self._channel_id: str | None = None
+        self._my_user_id: str | None = None
+        self._user_id_cache: dict[str, str] = {}
         self._session = requests.Session()
         self._session.headers.update({"Authorization": f"Bearer {self._token}"})
 
@@ -25,9 +33,60 @@ class NetchatRestClient:
         self._channel_id = data["id"]
         return self._channel_id
 
-    def post_message(self, message: str, channel_id: str | None = None) -> dict:
+    def get_my_user_id(self) -> str:
+        if not self._my_user_id:
+            self._my_user_id = self._api("GET", "/users/me")["id"]
+        return self._my_user_id
+
+    def get_user_id(self, username: str) -> str:
+        # API chỉ nhận ID nội bộ 26 ký tự, không nhận username — luôn tra ID trước
+        if username not in self._user_id_cache:
+            data = self._api("GET", f"/users/username/{username}")
+            self._user_id_cache[username] = data["id"]
+        return self._user_id_cache[username]
+
+    def create_direct_channel(self, user_id: str) -> str:
+        # Idempotent: 2 user đã từng chat thì server trả về channel cũ
+        data = self._api("POST", "/channels/direct", json=[self.get_my_user_id(), user_id])
+        return data["id"]
+
+    def send_direct_message(self, username: str, message: str, file_ids: list[str] | None = None) -> dict:
+        channel_id = self.create_direct_channel(self.get_user_id(username))
+        return self.post_message(message, channel_id, file_ids=file_ids)
+
+    def post_message(self, message: str, channel_id: str | None = None,
+                     file_ids: list[str] | None = None) -> dict:
         cid = channel_id or self.get_channel_id()
-        return self._api("POST", "/posts", json={"channel_id": cid, "message": message})
+        body: dict = {"channel_id": cid, "message": message}
+        if file_ids:
+            if len(file_ids) > MAX_FILES_PER_POST:
+                raise ValueError(f"Tối đa {MAX_FILES_PER_POST} file mỗi post")
+            body["file_ids"] = list(file_ids)
+        return self._api("POST", "/posts", json=body)
+
+    def upload_file(self, file_path: str, channel_id: str | None = None) -> str:
+        # Gửi file là quy trình 2 bước: upload multipart lấy file_id, rồi gắn vào post.
+        # file_id chỉ gắn được vào đúng 1 post và phải cùng channel đã upload.
+        cid = channel_id or self.get_channel_id()
+        with open(file_path, "rb") as f:
+            data = self._api(
+                "POST", "/files",
+                data={"channel_id": cid},
+                files={"files": (os.path.basename(file_path), f)},
+            )
+        return data["file_infos"][0]["id"]
+
+    def send_file(self, file_path: str, message: str = "", channel_id: str | None = None) -> dict:
+        cid = channel_id or self.get_channel_id()
+        file_id = self.upload_file(file_path, cid)
+        return self.post_message(message, cid, file_ids=[file_id])
+
+    def add_reaction(self, post_id: str, emoji_name: str = "thumbsup") -> dict:
+        return self._api("POST", "/reactions", json={
+            "user_id": self.get_my_user_id(),
+            "post_id": post_id,
+            "emoji_name": emoji_name,
+        })
 
     def download_file(self, file_id: str) -> bytes:
         url = f"{self._base_url}/api/v4/files/{file_id}"
