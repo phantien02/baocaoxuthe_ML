@@ -101,10 +101,49 @@ Mở netChat và:
 | Tạo báo cáo ngay | Gõ `!report` trong channel báo cáo hoặc DM |
 | Xem trạng thái | Gõ `!status` |
 | Tóm tắt tài liệu | Gửi file PDF/DOCX vào chat với bot |
+| Xem lịch báo cáo tự động | Gõ `!schedule` hoặc `!lịch` |
 | Hỏi trong nhóm | Gõ `@tên_bot` + câu hỏi (bot phải là thành viên nhóm) |
 | Hỏi bất kỳ điều gì về mạng lõi | Nhắn riêng cho bot như chat với người |
 
 Báo cáo tuần sẽ **tự động** được gửi vào channel theo lịch trong `.env` — không cần làm gì.
+
+### Đổi lịch báo cáo (chỉ admin)
+
+> ⚠️ Tính năng này chỉ dành cho **quản trị viên**. Tên quản trị viên phải được liệt kê trong biến `ADMIN_USERNAMES` trong file `.env` trên server.
+
+Muốn đổi ngày/giờ gửi báo cáo mà **không cần khởi động lại bot**, dùng lệnh `!schedule`:
+
+**Xem lịch hiện tại:**
+```
+!schedule
+```
+hoặc tên Việt:
+```
+!lịch
+```
+
+Kết quả sẽ hiển thị ngày + giờ báo cáo tự động chạy, ví dụ: `Báo cáo chạy: Thứ 2, 08:00 sáng. Lần kế tiếp: 17/07/2026 08:00.`
+
+**Đổi lịch (chỉ admin):**
+```
+!schedule mon,fri 08:30
+```
+
+Ý nghĩa:
+- `mon,fri` — gửi báo cáo vào **thứ 2 và thứ 6** (hoặc dùng số `1,5` → thứ 2 = 1, thứ 3 = 2, …, thứ 2 tuần sau = 0)
+- `08:30` — lúc **08 giờ 30 phút** sáng
+
+**Các định dạng ngày hợp lệ:**
+- Tên tiếng Anh: `mon, tue, wed, thu, fri, sat, sun` (ngăn cách bằng dấu phẩy, không cần space)
+- Số (0 = chủ nhật): `0, 1, 2, 3, 4, 5, 6` (0 = chủ nhật, 1 = thứ 2, …, 6 = thứ 7)
+- Ví dụ khác:
+  - `!schedule mon 09:00` → Mỗi thứ 2 09:00 sáng
+  - `!schedule 2,4,6 14:30` → Mỗi thứ 3, 5, 7 14:30 chiều
+
+**Lưu ý quan trọng:**
+- Lịch sẽ lưu vào **cơ sở dữ liệu** — bot sẽ nhớ ngay cả khi khởi động lại.
+- Chỉ **admin** (có tên trong `.env` biến `ADMIN_USERNAMES`) mới thay đổi được. Nếu gõ lệnh này mà bạn không phải admin, bot sẽ từ chối một cách lịch sự.
+- Nếu bot báo cáo rằng chưa có admin nào cấu hình (`ADMIN_USERNAMES` trống), yêu cầu quản trị viên hệ thống thêm tên admin vào `.env` trên server rồi khởi động lại bot **một lần** để nạp biến cấu hình.
 
 ## PHẦN 5 — Các lệnh quản trị thường dùng
 

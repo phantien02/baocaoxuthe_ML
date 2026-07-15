@@ -24,6 +24,7 @@
 - ✅ Nhận file PDF/DOCX đính kèm → tự đọc và tóm tắt
 - ✅ Gửi tin kèm file (upload 2 bước, tối đa 5 file/post)
 - ✅ Chống vòng lặp (bỏ qua tin của chính bot, tin hệ thống join/leave)
+- ✅ Chỉnh lịch crawl runtime qua lệnh `!schedule` (chỉ admin, lưu DB, không cần restart)
 
 ### Thu thập dữ liệu (crawler)
 - ✅ 3GPP, GSMA, ETSI: đọc qua **RSS feed**, có ngày xuất bản thật (`published_at`)
