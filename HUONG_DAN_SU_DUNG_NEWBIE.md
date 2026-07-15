@@ -130,15 +130,15 @@ Kết quả sẽ hiển thị ngày + giờ báo cáo tự động chạy, ví d
 ```
 
 Ý nghĩa:
-- `mon,fri` — gửi báo cáo vào **thứ 2 và thứ 6** (hoặc dùng số `1,5` → thứ 2 = 1, thứ 3 = 2, …, thứ 2 tuần sau = 0)
+- `mon,fri` — gửi báo cáo vào **thứ 2 và thứ 6** (hoặc dùng số `0,4` → thứ 2 = 0, thứ 3 = 1, …, chủ nhật = 6)
 - `08:30` — lúc **08 giờ 30 phút** sáng
 
 **Các định dạng ngày hợp lệ:**
 - Tên tiếng Anh: `mon, tue, wed, thu, fri, sat, sun` (ngăn cách bằng dấu phẩy, không cần space)
-- Số (0 = chủ nhật): `0, 1, 2, 3, 4, 5, 6` (0 = chủ nhật, 1 = thứ 2, …, 6 = thứ 7)
+- Số (0 = thứ 2): `0, 1, 2, 3, 4, 5, 6` (0 = thứ 2, 1 = thứ 3, 2 = thứ 4, 3 = thứ 5, 4 = thứ 6, 5 = thứ 7, 6 = chủ nhật)
 - Ví dụ khác:
   - `!schedule mon 09:00` → Mỗi thứ 2 09:00 sáng
-  - `!schedule 2,4,6 14:30` → Mỗi thứ 3, 5, 7 14:30 chiều
+  - `!schedule 2,4,6 14:30` → Mỗi thứ 4, 6, chủ nhật lúc 14:30
 
 **Lưu ý quan trọng:**
 - Lịch sẽ lưu vào **cơ sở dữ liệu** — bot sẽ nhớ ngay cả khi khởi động lại.
