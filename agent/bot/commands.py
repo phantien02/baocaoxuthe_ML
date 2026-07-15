@@ -1,5 +1,6 @@
 import io
 import json
+import os
 from datetime import datetime
 
 from agent.llm.claude_client import chat_reply, generate_report, summarize_document
@@ -9,6 +10,12 @@ from agent.storage.database import (
 from agent.scheduler import get_next_run
 
 SOURCES = ["3GPP", "GSMA", "ETSI", "Ericsson", "Nokia", "Huawei"]
+
+
+def is_admin(sender_name: str) -> bool:
+    raw = os.getenv("ADMIN_USERNAMES", "")
+    admins = {u.strip().lower() for u in raw.split(",") if u.strip()}
+    return sender_name.strip().lstrip("@").lower() in admins if admins else False
 
 
 def handle_post(post: dict, rest_client, event_data: dict | None = None) -> None:

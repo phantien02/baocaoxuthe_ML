@@ -178,3 +178,27 @@ def test_ignores_posts_from_other_channels():
     post = make_post("!report", channel_id="other_chan")
     handle_post(post, rest, group_event())
     rest.post_message.assert_not_called()
+
+
+def test_is_admin_true_when_listed(monkeypatch):
+    monkeypatch.setenv("ADMIN_USERNAMES", "tienpc1,sep_a")
+    from agent.bot.commands import is_admin
+    assert is_admin("tienpc1") is True
+
+
+def test_is_admin_case_insensitive(monkeypatch):
+    monkeypatch.setenv("ADMIN_USERNAMES", "TienPC1")
+    from agent.bot.commands import is_admin
+    assert is_admin("tienpc1") is True
+
+
+def test_is_admin_false_when_not_listed(monkeypatch):
+    monkeypatch.setenv("ADMIN_USERNAMES", "sep_a")
+    from agent.bot.commands import is_admin
+    assert is_admin("tienpc1") is False
+
+
+def test_is_admin_false_when_unset(monkeypatch):
+    monkeypatch.delenv("ADMIN_USERNAMES", raising=False)
+    from agent.bot.commands import is_admin
+    assert is_admin("tienpc1") is False
