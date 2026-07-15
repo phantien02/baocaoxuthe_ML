@@ -3,6 +3,8 @@ import re
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from agent.storage.database import get_setting
+
 _DAY_NAMES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 _DAY_VI = {
     "mon": "Thứ 2", "tue": "Thứ 3", "wed": "Thứ 4", "thu": "Thứ 5",
@@ -48,11 +50,16 @@ def format_days_vi(days: str) -> str:
 _scheduler: BackgroundScheduler | None = None
 
 
+def _load_schedule() -> tuple[str, str]:
+    """Lịch theo thứ tự ưu tiên: DB -> .env -> mặc định code."""
+    days = get_setting("schedule_days") or os.getenv("REPORT_SCHEDULE_DAY", "mon")
+    time_str = get_setting("schedule_time") or os.getenv("REPORT_SCHEDULE_TIME", "08:00")
+    return days, time_str
+
+
 def init_scheduler(crawl_and_report_fn) -> BackgroundScheduler:
     global _scheduler
-    day = os.getenv("REPORT_SCHEDULE_DAY", "mon")
-    day_of_week = int(day) if day.isdigit() else day
-    time_str = os.getenv("REPORT_SCHEDULE_TIME", "08:00")
+    days, time_str = _load_schedule()
     timezone = os.getenv("REPORT_TIMEZONE", "Asia/Ho_Chi_Minh")
     hour, minute = time_str.split(":")
 
@@ -60,7 +67,7 @@ def init_scheduler(crawl_and_report_fn) -> BackgroundScheduler:
     _scheduler.add_job(
         crawl_and_report_fn,
         CronTrigger(
-            day_of_week=day_of_week,
+            day_of_week=days,
             hour=int(hour),
             minute=int(minute),
             timezone=timezone,
@@ -80,6 +87,23 @@ def get_next_run() -> str:
     if job and job.next_run_time:
         return job.next_run_time.strftime("%Y-%m-%d %H:%M %Z")
     return "Unknown"
+
+
+def reschedule(days: str, time_str: str) -> str:
+    """Đổi trigger job weekly_report đang chạy. Trả chuỗi lần chạy kế tiếp."""
+    if not _scheduler:
+        raise RuntimeError("Scheduler chưa khởi động")
+    hour, minute = time_str.split(":")
+    _scheduler.reschedule_job(
+        "weekly_report",
+        trigger=CronTrigger(
+            day_of_week=days,
+            hour=int(hour),
+            minute=int(minute),
+            timezone=_scheduler.timezone,
+        ),
+    )
+    return get_next_run()
 
 
 def stop() -> None:
