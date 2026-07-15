@@ -74,3 +74,35 @@ def test_save_uploaded_doc_returns_id():
     doc_id = save_uploaded_doc("spec.pdf", "pdf", "full content", "summary text", "user123")
     assert isinstance(doc_id, int)
     assert doc_id > 0
+
+
+def test_settings_returns_default_when_missing():
+    init_db()
+    from agent.storage.database import get_setting
+    assert get_setting("schedule_days") is None
+    assert get_setting("schedule_days", "mon") == "mon"
+
+
+def test_settings_set_then_get():
+    init_db()
+    from agent.storage.database import get_setting, set_setting
+    set_setting("schedule_days", "mon,fri")
+    assert get_setting("schedule_days") == "mon,fri"
+
+
+def test_settings_upsert_overwrites():
+    init_db()
+    from agent.storage.database import get_setting, set_setting
+    set_setting("schedule_time", "08:00")
+    set_setting("schedule_time", "09:30")
+    assert get_setting("schedule_time") == "09:30"
+
+
+def test_init_db_creates_settings_table():
+    init_db()
+    import sqlite3, os
+    conn = sqlite3.connect(os.environ["DB_PATH"])
+    tables = {t[0] for t in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+    assert "settings" in tables
+    conn.close()

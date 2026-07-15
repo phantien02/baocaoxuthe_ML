@@ -45,6 +45,11 @@ def init_db() -> None:
                 uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 uploaded_by TEXT
             );
+            CREATE TABLE IF NOT EXISTS settings (
+                key        TEXT PRIMARY KEY,
+                value      TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         """)
         # Migration cho DB tạo trước khi có cột published_at
         try:
@@ -115,3 +120,21 @@ def save_uploaded_doc(filename: str, file_type: str, content: str, summary: str,
             (filename, file_type, content, summary, uploaded_by),
         )
         return cursor.lastrowid
+
+
+def get_setting(key: str, default: str | None = None) -> str | None:
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT value FROM settings WHERE key = ?", (key,)
+        ).fetchone()
+        return row["value"] if row else default
+
+
+def set_setting(key: str, value: str) -> None:
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO settings (key, value) VALUES (?, ?)"
+            " ON CONFLICT(key) DO UPDATE SET"
+            " value = excluded.value, updated_at = CURRENT_TIMESTAMP",
+            (key, value),
+        )
