@@ -153,10 +153,19 @@ def _handle_schedule(text: str, channel_id: str, rest_client, sender_name: str) 
         return
 
     if not is_admin(sender_name):
-        rest_client.post_message(
-            "⛔ Chỉ admin mới đổi được lịch. Bạn vẫn có thể xem bằng `!schedule`.",
-            channel_id,
-        )
+        raw_admins = os.getenv("ADMIN_USERNAMES", "")
+        no_admin_configured = not any(u.strip() for u in raw_admins.split(","))
+        if no_admin_configured:
+            rest_client.post_message(
+                "⚠️ Chưa cấu hình admin (ADMIN_USERNAMES trống). "
+                "Quản trị viên cần thêm tên vào .env trên server rồi khởi động lại bot một lần.",
+                channel_id,
+            )
+        else:
+            rest_client.post_message(
+                "⛔ Chỉ admin mới đổi được lịch. Bạn vẫn có thể xem bằng `!schedule`.",
+                channel_id,
+            )
         return
 
     # Reschedule job đang chạy TRƯỚC, chỉ lưu DB nếu thành công

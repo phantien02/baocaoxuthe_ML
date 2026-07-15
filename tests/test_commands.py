@@ -245,6 +245,21 @@ def test_schedule_set_denied_for_non_admin(monkeypatch):
     assert "⛔" in rest.post_message.call_args[0][0]
 
 
+def test_schedule_no_admin_configured_message(monkeypatch):
+    init_db()
+    monkeypatch.delenv("ADMIN_USERNAMES", raising=False)
+    rest = make_rest()
+    post = make_post("!schedule mon,fri 08:30")
+    with patch("agent.bot.commands.reschedule") as resched:
+        handle_post(post, rest, group_event(sender="@ai_do_cung_duoc"))
+    resched.assert_not_called()
+    from agent.storage.database import get_setting
+    assert get_setting("schedule_days") is None
+    msg = rest.post_message.call_args[0][0]
+    assert "ADMIN_USERNAMES" in msg or "Chưa cấu hình admin" in msg
+    assert "⛔" not in msg
+
+
 def test_schedule_bad_syntax_shows_hint(monkeypatch):
     init_db()
     monkeypatch.setenv("ADMIN_USERNAMES", "tienpc1")
