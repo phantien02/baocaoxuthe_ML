@@ -6,8 +6,11 @@ from datetime import datetime
 from agent.llm.claude_client import chat_reply, generate_report, summarize_document
 from agent.storage.database import (
     get_recent_items, save_report, save_uploaded_doc, get_last_crawl_time,
+    get_setting, set_setting,
 )
-from agent.scheduler import get_next_run
+from agent.scheduler import (
+    get_next_run, reschedule, parse_schedule, format_days_vi,
+)
 
 SOURCES = ["3GPP", "GSMA", "ETSI", "Ericsson", "Nokia", "Huawei"]
 
@@ -51,7 +54,10 @@ def handle_post(post: dict, rest_client, event_data: dict | None = None) -> None
         return
 
     if text.startswith("!"):
-        _handle_command(text, channel_id, rest_client, allow_chat_fallback=is_dm or mentioned)
+        _handle_command(
+            text, channel_id, rest_client, sender_name,
+            allow_chat_fallback=is_dm or mentioned,
+        )
         return
 
     # Trong channel báo cáo, tin thường (không lệnh, không mention) thì bỏ qua
@@ -77,12 +83,15 @@ def _detect_mention(message: str, event_data: dict, rest_client) -> tuple[bool, 
     return mentioned, clean
 
 
-def _handle_command(text: str, channel_id: str, rest_client, allow_chat_fallback: bool = False) -> None:
+def _handle_command(text: str, channel_id: str, rest_client, sender_name: str = "",
+                    allow_chat_fallback: bool = False) -> None:
     cmd = text.lower().split()[0]
     if cmd in ("!report", "!báo_cáo"):
         _handle_report(channel_id, rest_client)
     elif cmd == "!status":
         _handle_status(channel_id, rest_client)
+    elif cmd in ("!schedule", "!lịch"):
+        _handle_schedule(text, channel_id, rest_client, sender_name)
     elif cmd == "!sources":
         rest_client.post_message(_sources_text(), channel_id)
     elif cmd == "!help":
@@ -113,6 +122,52 @@ def _handle_status(channel_id: str, rest_client) -> None:
     rest_client.post_message(msg, channel_id)
 
 
+def _handle_schedule(text: str, channel_id: str, rest_client, sender_name: str) -> None:
+    parts = text.split()
+    # Xem lịch: !schedule (không tham số) — ai cũng gọi được
+    if len(parts) < 3:
+        days = get_setting("schedule_days") or os.getenv("REPORT_SCHEDULE_DAY", "mon")
+        time_str = get_setting("schedule_time") or os.getenv("REPORT_SCHEDULE_TIME", "08:00")
+        try:
+            days_vi = format_days_vi(days)
+        except (KeyError, AttributeError):
+            days_vi = days
+        rest_client.post_message(
+            f"🗓️ Lịch hiện tại: {days_vi} lúc {time_str}.\n"
+            f"Lần chạy kế tiếp: {get_next_run()}\n"
+            "Đổi lịch (admin): !schedule mon,fri 08:30",
+            channel_id,
+        )
+        return
+
+    # Đặt lịch: validate trước, kiểm quyền sau
+    try:
+        days, time_str = parse_schedule(parts[1], parts[2])
+    except ValueError as e:
+        rest_client.post_message(f"⚠️ {e}", channel_id)
+        return
+
+    if not is_admin(sender_name):
+        rest_client.post_message(
+            "⛔ Chỉ admin mới đổi được lịch. Bạn vẫn có thể xem bằng `!schedule`.",
+            channel_id,
+        )
+        return
+
+    set_setting("schedule_days", days)
+    set_setting("schedule_time", time_str)
+    try:
+        next_run = reschedule(days, time_str)
+    except Exception as e:
+        rest_client.post_message(f"⚠️ Lỗi đổi lịch: {e}", channel_id)
+        return
+    rest_client.post_message(
+        f"✅ Đã đổi lịch: {format_days_vi(days)} lúc {time_str}. "
+        f"Lần chạy kế tiếp: {next_run}",
+        channel_id,
+    )
+
+
 def _sources_text() -> str:
     lines = "\n".join(f"  • {s}" for s in SOURCES)
     return f"🌐 **Nguồn đang theo dõi:**\n{lines}"
@@ -123,6 +178,7 @@ def _help_text() -> str:
         "**Lệnh bot:**\n"
         "  `!report` — Tạo báo cáo từ 7 ngày qua\n"
         "  `!status` — Thời gian crawl cuối + lịch tiếp theo\n"
+        "  `!schedule` — Xem lịch; admin: `!schedule mon,fri 08:30` để đổi\n"
         "  `!sources` — Danh sách nguồn\n"
         "  `!help` — Trợ giúp\n"
         "  _(attach file PDF/DOCX)_ — Tóm tắt tài liệu\n\n"

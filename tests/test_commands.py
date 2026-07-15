@@ -202,3 +202,62 @@ def test_is_admin_false_when_unset(monkeypatch):
     monkeypatch.delenv("ADMIN_USERNAMES", raising=False)
     from agent.bot.commands import is_admin
     assert is_admin("tienpc1") is False
+
+
+def test_schedule_view_shows_current(monkeypatch):
+    init_db()
+    from agent.storage.database import set_setting
+    set_setting("schedule_days", "mon,fri")
+    set_setting("schedule_time", "08:30")
+    rest = make_rest()
+    post = make_post("!schedule")
+    with patch("agent.bot.commands.get_next_run", return_value="2026-07-17 08:30"):
+        handle_post(post, rest, group_event(sender="@ai_ai"))
+    msg = rest.post_message.call_args[0][0]
+    assert "Thứ 2, Thứ 6" in msg
+    assert "08:30" in msg
+
+
+def test_schedule_set_success_for_admin(monkeypatch):
+    init_db()
+    monkeypatch.setenv("ADMIN_USERNAMES", "tienpc1")
+    rest = make_rest()
+    post = make_post("!schedule mon,fri 08:30")
+    with patch("agent.bot.commands.reschedule", return_value="2026-07-17 08:30") as resched:
+        handle_post(post, rest, group_event(sender="@tienpc1"))
+    resched.assert_called_once_with("mon,fri", "08:30")
+    from agent.storage.database import get_setting
+    assert get_setting("schedule_days") == "mon,fri"
+    assert get_setting("schedule_time") == "08:30"
+    assert "✅" in rest.post_message.call_args[0][0]
+
+
+def test_schedule_set_denied_for_non_admin(monkeypatch):
+    init_db()
+    monkeypatch.setenv("ADMIN_USERNAMES", "tienpc1")
+    rest = make_rest()
+    post = make_post("!schedule mon,fri 08:30")
+    with patch("agent.bot.commands.reschedule") as resched:
+        handle_post(post, rest, group_event(sender="@nguoi_la"))
+    resched.assert_not_called()
+    from agent.storage.database import get_setting
+    assert get_setting("schedule_days") is None
+    assert "⛔" in rest.post_message.call_args[0][0]
+
+
+def test_schedule_bad_syntax_shows_hint(monkeypatch):
+    init_db()
+    monkeypatch.setenv("ADMIN_USERNAMES", "tienpc1")
+    rest = make_rest()
+    post = make_post("!schedule funday 99:99")
+    with patch("agent.bot.commands.reschedule") as resched:
+        handle_post(post, rest, group_event(sender="@tienpc1"))
+    resched.assert_not_called()
+    assert "!schedule" in rest.post_message.call_args[0][0]
+
+
+def test_help_lists_schedule():
+    init_db()
+    rest = make_rest()
+    handle_post(make_post("!help"), rest, group_event())
+    assert "!schedule" in rest.post_message.call_args[0][0]
