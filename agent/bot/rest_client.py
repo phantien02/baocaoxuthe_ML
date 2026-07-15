@@ -17,6 +17,7 @@ class NetchatRestClient:
         self._channel_id: str | None = os.environ.get("NETCHAT_CHANNEL_ID") or None
         self._me: dict | None = None
         self._user_id_cache: dict[str, str] = {}
+        self._username_cache: dict[str, str] = {}
         self._session = requests.Session()
         # WAF nội bộ chặn theo User-Agent (python-requests/PowerShell/Postman bị 403
         # trang HTML; curl đi qua được) — xem mục 1.2 và mục 5 HUONG_DAN_TEST_API_NETCHAT.md
@@ -64,6 +65,15 @@ class NetchatRestClient:
             data = self._api("GET", f"/users/username/{username}")
             self._user_id_cache[username] = data["id"]
         return self._user_id_cache[username]
+
+    def get_username(self, user_id: str) -> str:
+        # Tra username thật từ user_id ổn định (dùng để phân quyền — sender_name
+        # trong event WebSocket có thể là tên hiển thị, không đáng tin).
+        # Endpoint /users/{id} đã xác nhận được gateway bot cho phép.
+        if user_id not in self._username_cache:
+            data = self._api("GET", f"/users/{user_id}")
+            self._username_cache[user_id] = data["username"]
+        return self._username_cache[user_id]
 
     def create_direct_channel(self, user_id: str) -> str:
         # Idempotent: 2 user đã từng chat thì server trả về channel cũ

@@ -222,6 +222,7 @@ def test_schedule_set_success_for_admin(monkeypatch):
     init_db()
     monkeypatch.setenv("ADMIN_USERNAMES", "tienpc1")
     rest = make_rest()
+    rest.get_username.return_value = "tienpc1"  # user_id -> username thật
     post = make_post("!schedule mon,fri 08:30")
     with patch("agent.bot.commands.reschedule", return_value="2026-07-17 08:30") as resched:
         handle_post(post, rest, group_event(sender="@tienpc1"))
@@ -236,6 +237,7 @@ def test_schedule_set_denied_for_non_admin(monkeypatch):
     init_db()
     monkeypatch.setenv("ADMIN_USERNAMES", "tienpc1")
     rest = make_rest()
+    rest.get_username.return_value = "nguoi_la"  # user_id -> username thật (không phải admin)
     post = make_post("!schedule mon,fri 08:30")
     with patch("agent.bot.commands.reschedule") as resched:
         handle_post(post, rest, group_event(sender="@nguoi_la"))
@@ -293,10 +295,26 @@ def test_schedule_missing_time_shows_hint(monkeypatch):
     assert "08:30" in msg or "!schedule" in msg
 
 
+def test_schedule_admin_matched_by_userid_not_display_name(monkeypatch):
+    """Bug thực tế: sender_name là TÊN HIỂN THỊ ('Phan Công Tiến'), không phải username.
+    Admin phải được nhận diện qua user_id -> username thật ('tienpc1')."""
+    init_db()
+    monkeypatch.setenv("ADMIN_USERNAMES", "tienpc1")
+    rest = make_rest()
+    rest.get_username.return_value = "tienpc1"  # user_id ổn định -> username thật
+    post = make_post("!schedule mon,fri 08:30", user_id="6xin6bfe97dwxb3prsi5ii71yo")
+    with patch("agent.bot.commands.reschedule", return_value="2026-07-17 08:30") as resched:
+        handle_post(post, rest, group_event(sender="@Phan Công Tiến"))
+    rest.get_username.assert_called_once_with("6xin6bfe97dwxb3prsi5ii71yo")
+    resched.assert_called_once_with("mon,fri", "08:30")
+    assert "✅" in rest.post_message.call_args[0][0]
+
+
 def test_schedule_reschedule_failure_does_not_persist(monkeypatch):
     init_db()
     monkeypatch.setenv("ADMIN_USERNAMES", "tienpc1")
     rest = make_rest()
+    rest.get_username.return_value = "tienpc1"
     post = make_post("!schedule tue 09:00")
     with patch("agent.bot.commands.reschedule", side_effect=RuntimeError("boom")):
         handle_post(post, rest, group_event(sender="@tienpc1"))

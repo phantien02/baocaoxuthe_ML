@@ -55,7 +55,7 @@ def handle_post(post: dict, rest_client, event_data: dict | None = None) -> None
 
     if text.startswith("!"):
         _handle_command(
-            text, channel_id, rest_client, sender_name,
+            text, channel_id, rest_client, sender_name, user_id,
             allow_chat_fallback=is_dm or mentioned,
         )
         return
@@ -84,14 +84,14 @@ def _detect_mention(message: str, event_data: dict, rest_client) -> tuple[bool, 
 
 
 def _handle_command(text: str, channel_id: str, rest_client, sender_name: str = "",
-                    allow_chat_fallback: bool = False) -> None:
+                    user_id: str = "", allow_chat_fallback: bool = False) -> None:
     cmd = text.lower().split()[0]
     if cmd in ("!report", "!báo_cáo"):
         _handle_report(channel_id, rest_client)
     elif cmd == "!status":
         _handle_status(channel_id, rest_client)
     elif cmd in ("!schedule", "!lịch"):
-        _handle_schedule(text, channel_id, rest_client, sender_name)
+        _handle_schedule(text, channel_id, rest_client, sender_name, user_id)
     elif cmd == "!sources":
         rest_client.post_message(_sources_text(), channel_id)
     elif cmd == "!help":
@@ -122,7 +122,19 @@ def _handle_status(channel_id: str, rest_client) -> None:
     rest_client.post_message(msg, channel_id)
 
 
-def _handle_schedule(text: str, channel_id: str, rest_client, sender_name: str) -> None:
+def _resolve_username(rest_client, user_id: str, sender_name: str) -> str:
+    """Định danh người gửi qua user_id ổn định (tra username thật). sender_name trong
+    event có thể là tên hiển thị nên không dùng để phân quyền. Lỗi tra cứu -> fallback sender_name."""
+    if user_id:
+        try:
+            return rest_client.get_username(user_id)
+        except Exception as e:
+            print(f"[schedule] không tra được username từ user_id={user_id!r}: {e}")
+    return sender_name
+
+
+def _handle_schedule(text: str, channel_id: str, rest_client, sender_name: str,
+                     user_id: str = "") -> None:
     parts = text.split()
     # Xem lịch: !schedule (không tham số) — ai cũng gọi được
     if len(parts) == 1:
@@ -152,7 +164,11 @@ def _handle_schedule(text: str, channel_id: str, rest_client, sender_name: str) 
         rest_client.post_message(f"⚠️ {e}", channel_id)
         return
 
-    if not is_admin(sender_name):
+    # Phân quyền theo username thật (tra từ user_id), không theo sender_name (tên hiển thị)
+    username = _resolve_username(rest_client, user_id, sender_name)
+    print(f"[schedule] set: sender_name={sender_name!r} user_id={user_id!r} "
+          f"resolved_username={username!r} admins={os.getenv('ADMIN_USERNAMES', '')!r}")
+    if not is_admin(username):
         raw_admins = os.getenv("ADMIN_USERNAMES", "")
         no_admin_configured = not any(u.strip() for u in raw_admins.split(","))
         if no_admin_configured:
