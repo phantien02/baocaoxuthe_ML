@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
+from google.genai import errors as genai_errors
 from agent.llm.claude_client import generate_report, summarize_document
 
 
@@ -43,6 +44,36 @@ def test_summarize_document_returns_string():
         result = summarize_document("Document content here", "spec.pdf")
     assert isinstance(result, str)
     assert len(result) > 0
+
+
+class _Transient503(genai_errors.ServerError):
+    def __init__(self):
+        self.code = 503
+        self.message = "This model is currently experiencing high demand"
+
+
+def test_generate_report_retries_on_transient_503():
+    """Gemini 503 tạm thời -> phải retry chứ không làm hỏng cả báo cáo."""
+    mock_client = MagicMock()
+    mock_client.models.generate_content.side_effect = [
+        _Transient503(), _Transient503(), _mock_response("📡 BÁO CÁO OK"),
+    ]
+    with patch("agent.llm.claude_client.get_client", return_value=mock_client), \
+         patch("agent.llm.claude_client.time.sleep"):
+        result = generate_report(SAMPLE_ITEMS, "Tuần 27/2026")
+    assert result == "📡 BÁO CÁO OK"
+    assert mock_client.models.generate_content.call_count == 3
+
+
+def test_generate_report_gives_up_after_max_retries():
+    """503 kéo dài -> sau số lần thử tối đa thì ném lỗi (không nuốt im lặng)."""
+    mock_client = MagicMock()
+    mock_client.models.generate_content.side_effect = _Transient503()
+    with patch("agent.llm.claude_client.get_client", return_value=mock_client), \
+         patch("agent.llm.claude_client.time.sleep"):
+        with pytest.raises(genai_errors.APIError):
+            generate_report(SAMPLE_ITEMS, "Tuần 27/2026")
+    assert mock_client.models.generate_content.call_count >= 3
 
 
 def test_summarize_truncates_long_content():
