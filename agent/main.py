@@ -21,18 +21,30 @@ logger = logging.getLogger(__name__)
 
 def crawl_and_report(rest_client: NetchatRestClient) -> None:
     logger.info("Starting scheduled crawl+report")
-    new_count = run_all_crawlers()
-    logger.info(f"Crawl complete: {new_count} new items")
-    items = get_recent_items(days=7)
-    if not items:
-        logger.info("No items in last 7 days, skipping report")
-        return
-    week_label = datetime.now().strftime("Tuần %W/%Y")
-    report = generate_report(items, week_label)
-    channel_id = rest_client.get_channel_id()
-    save_report("scheduled", report, channel_id)
-    rest_client.post_message(report, channel_id)
-    logger.info("Scheduled report sent")
+    try:
+        new_count = run_all_crawlers()
+        logger.info(f"Crawl complete: {new_count} new items")
+        items = get_recent_items(days=7)
+        if not items:
+            logger.info("No items in last 7 days, skipping report")
+            return
+        week_label = datetime.now().strftime("Tuần %W/%Y")
+        report = generate_report(items, week_label)
+        channel_id = rest_client.get_channel_id()
+        save_report("scheduled", report, channel_id)
+        rest_client.post_message(report, channel_id)
+        logger.info("Scheduled report sent")
+    except Exception as e:
+        # Không để job chết âm thầm: log đầy đủ traceback + báo ngắn cho người dùng
+        logger.exception("Scheduled crawl+report failed")
+        try:
+            rest_client.post_message(
+                f"⚠️ Báo cáo theo lịch gặp lỗi ({type(e).__name__}). "
+                "Bot sẽ tự chạy lại vào lịch kế tiếp; bạn có thể thử `!report` sau ít phút.",
+                rest_client.get_channel_id(),
+            )
+        except Exception:
+            logger.exception("Không gửi được thông báo lỗi cho người dùng")
 
 
 def main() -> None:

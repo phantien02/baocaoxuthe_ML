@@ -48,6 +48,23 @@ def test_crawl_and_report_uses_current_week_label():
     assert "Tuần" in captured["week_label"]
 
 
+def test_crawl_and_report_notifies_on_failure():
+    """Job lịch lỗi (vd Gemini sập) -> bot nhắn cảnh báo vào channel, không im lặng
+    và không văng exception ra ngoài (tránh job chết âm thầm)."""
+    init_db()
+    rest = MagicMock()
+    rest.get_channel_id.return_value = "chan1"
+    items = [{"title": "T", "source": "s", "url": "u", "content": "c"}]
+    with patch("agent.main.run_all_crawlers", return_value=1):
+        with patch("agent.main.get_recent_items", return_value=items):
+            with patch("agent.main.generate_report", side_effect=RuntimeError("Gemini sập")):
+                crawl_and_report(rest)  # không được raise
+    rest.post_message.assert_called_once()
+    msg = rest.post_message.call_args[0][0]
+    assert "⚠️" in msg
+    assert rest.post_message.call_args[0][1] == "chan1"
+
+
 def test_crawl_and_report_saves_report_as_scheduled():
     init_db()
     rest = MagicMock()
