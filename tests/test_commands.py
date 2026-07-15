@@ -261,3 +261,32 @@ def test_help_lists_schedule():
     rest = make_rest()
     handle_post(make_post("!help"), rest, group_event())
     assert "!schedule" in rest.post_message.call_args[0][0]
+
+
+def test_schedule_missing_time_shows_hint(monkeypatch):
+    init_db()
+    monkeypatch.setenv("ADMIN_USERNAMES", "tienpc1")
+    rest = make_rest()
+    post = make_post("!schedule mon,fri")
+    with patch("agent.bot.commands.reschedule") as resched:
+        handle_post(post, rest, group_event(sender="@tienpc1"))
+    resched.assert_not_called()
+    from agent.storage.database import get_setting
+    assert get_setting("schedule_days") is None
+    msg = rest.post_message.call_args[0][0]
+    assert "Lịch hiện tại" not in msg
+    assert "08:30" in msg or "!schedule" in msg
+
+
+def test_schedule_reschedule_failure_does_not_persist(monkeypatch):
+    init_db()
+    monkeypatch.setenv("ADMIN_USERNAMES", "tienpc1")
+    rest = make_rest()
+    post = make_post("!schedule tue 09:00")
+    with patch("agent.bot.commands.reschedule", side_effect=RuntimeError("boom")):
+        handle_post(post, rest, group_event(sender="@tienpc1"))
+    msg = rest.post_message.call_args[0][0]
+    assert "Lỗi" in msg
+    from agent.storage.database import get_setting
+    assert get_setting("schedule_days") is None
+    assert get_setting("schedule_time") is None

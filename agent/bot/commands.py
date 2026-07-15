@@ -9,7 +9,7 @@ from agent.storage.database import (
     get_setting, set_setting,
 )
 from agent.scheduler import (
-    get_next_run, reschedule, parse_schedule, format_days_vi,
+    get_next_run, reschedule, parse_schedule, format_days_vi, _SYNTAX_HINT,
 )
 
 SOURCES = ["3GPP", "GSMA", "ETSI", "Ericsson", "Nokia", "Huawei"]
@@ -125,7 +125,7 @@ def _handle_status(channel_id: str, rest_client) -> None:
 def _handle_schedule(text: str, channel_id: str, rest_client, sender_name: str) -> None:
     parts = text.split()
     # Xem lịch: !schedule (không tham số) — ai cũng gọi được
-    if len(parts) < 3:
+    if len(parts) == 1:
         days = get_setting("schedule_days") or os.getenv("REPORT_SCHEDULE_DAY", "mon")
         time_str = get_setting("schedule_time") or os.getenv("REPORT_SCHEDULE_TIME", "08:00")
         try:
@@ -138,6 +138,11 @@ def _handle_schedule(text: str, channel_id: str, rest_client, sender_name: str) 
             "Đổi lịch (admin): !schedule mon,fri 08:30",
             channel_id,
         )
+        return
+
+    # Thiếu tham số giờ (vd: "!schedule mon,fri") — báo lỗi, không hiện view
+    if len(parts) < 3:
+        rest_client.post_message(f"⚠️ {_SYNTAX_HINT}", channel_id)
         return
 
     # Đặt lịch: validate trước, kiểm quyền sau
@@ -154,13 +159,16 @@ def _handle_schedule(text: str, channel_id: str, rest_client, sender_name: str) 
         )
         return
 
-    set_setting("schedule_days", days)
-    set_setting("schedule_time", time_str)
+    # Reschedule job đang chạy TRƯỚC, chỉ lưu DB nếu thành công
+    # (tránh DB và job live lệch nhau nếu reschedule lỗi)
     try:
         next_run = reschedule(days, time_str)
     except Exception as e:
         rest_client.post_message(f"⚠️ Lỗi đổi lịch: {e}", channel_id)
         return
+
+    set_setting("schedule_days", days)
+    set_setting("schedule_time", time_str)
     rest_client.post_message(
         f"✅ Đã đổi lịch: {format_days_vi(days)} lúc {time_str}. "
         f"Lần chạy kế tiếp: {next_run}",
